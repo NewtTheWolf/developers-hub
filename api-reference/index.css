@@ -1,0 +1,158 @@
+/*@import "./SwaggerDark.css";*/
+body {
+    margin: 0;
+    background: #f1f1f1;
+}
+
+html {
+    box-sizing: border-box;
+    overflow: -moz-scrollbars-vertical;
+    overflow-y: scroll;
+}
+
+*,
+*:before,
+*:after {
+    box-sizing: inherit;
+}
+
+
+/* edits */
+
+
+.swagger-ui .opblock-tag:hover{
+    background: rgba(0, 0, 0, .1);
+    border-radius: 4px;
+}
+.swagger-ui .operation-tag-content{
+    padding: 20px;
+}
+
+.swagger-ui .opblock-tag{
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
+.swagger-ui .opblock-tag-section {
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, .05);
+    margin-bottom: 10px;
+}
+
+.swagger-ui .block-desktop span:nth-child(1) .opblock-tag{
+    border-top: none;
+}
+
+.swagger-ui table tbody tr td {
+    padding: 20px 0;
+}
+.swagger-ui table tbody tr td:first-of-type {
+    padding: 20px 0;
+    font-weight: bold;
+}
+.swagger-ui .renderedMarkdown p {
+    margin: 0 auto 1em;
+}
+.swagger-ui h3 .renderedMarkdown p {
+    margin: 0;
+}
+.swagger-ui .highlight-code > .microlight {
+    min-height: unset;
+}
+.swagger-ui table thead tr td, .swagger-ui table thead tr th{
+    font-size: 14px;
+    color: #3b4151;
+}
+.swagger-ui .response-col_description__inner .renderedMarkdown > p:first-child{
+    font-weight: bold;
+}
+.swagger-ui table.model{
+    margin: .2rem 0;
+}
+.swagger-ui table.model .model-title {
+    font-size: 12px;
+    font-family: monospace;
+}
+.swagger-ui table.model tr.property-row td{
+    padding-top: .5em !important;
+    padding-bottom: .5em !important;
+}
+.swagger-ui table.model tr .renderedMarkdown p{
+    margin: 0;
+}
+.model-container .model .model-toggle{
+    top: 1px
+}
+.model-container .model .model-toggle::after{
+    width: 20px;
+    height: 10px;
+}
+.swagger-ui .opblock .opblock-section-header {
+    background: hsl(0deg 0% 100% / 50%);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .1);
+}
+
+/* Loading indicator styles */
+.loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 0.3s ease-out;
+    pointer-events: none;
+}
+
+.loader-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loader-spinner {
+    text-align: center;
+    color: #3b4151;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 30px 40px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 6px solid #e0e0e0;
+    border-top: 6px solid #3b4151;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loader-spinner p {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 500;
+}
+
+/* Unified loading message */
+.loader-overlay[data-phase="loading"] p::after,
+.loader-overlay[data-phase="rendering"] p::after {
+    content: "Loading...";
+}
+
+.loader-overlay p {
+    position: relative;
+}

@@ -1,0 +1,26 @@
+name: Validate OpenAPI Specification
+
+on:
+  push:
+    paths:
+      - 'api-reference/**'
+  pull_request:
+    paths:
+      - 'api-reference/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Lint the multi-file spec entrypoint; Redocly resolves the
+      # ./Domains/*.yaml $refs. Matches the sync step in CLAUDE.md.
+      - name: Validate OpenAPI spec
+        run: npx @redocly/cli@latest lint api-reference/turbo-smtp.yaml

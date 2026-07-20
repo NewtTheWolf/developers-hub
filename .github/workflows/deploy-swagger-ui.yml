@@ -24,9 +24,10 @@ jobs:
         uses: actions/checkout@v4
 
       # api-reference/ is a complete, self-contained Swagger UI bundle
-      # (branded UI + multi-file spec: turbo-smtp.yaml + Domains/*.yaml),
-      # synced from ../turbo-smtp-openapi/turbo-api-2/. Publish it verbatim —
-      # relative asset and $ref paths resolve at the Pages site root.
+      # (branded UI + a single pre-bundled spec: turbo-smtp.yaml, produced by
+      # `redocly bundle` upstream — no Domains/ split), synced from
+      # ../turbo-smtp-openapi/turbo-api-2/. Publish it verbatim — relative
+      # asset paths resolve at the Pages site root.
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

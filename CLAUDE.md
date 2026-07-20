@@ -11,7 +11,7 @@ Content is authored in Markdown and published via GitHub Pages. This is a docs-a
 ## Repository Structure
 
 - **`docs/`** — Topic guides (getting-started, transactional, validation, webhooks)
-- **`api-reference/`** — OpenAPI 3.1 spec + self-contained Swagger UI bundle (deployed to GitHub Pages) + narrative `README.md` overview
+- **`api-reference/`** — single pre-bundled OpenAPI 3.1 spec (`turbo-smtp.yaml`, no `Domains/` split) + self-contained Swagger UI bundle (deployed to GitHub Pages) + narrative `README.md` overview
 - **`sdks/`** — SDK integration guides per language (Node.js, Python, Go, PHP, C#)
 - **`ai-integrations/`** — MCP Server and Agent Skills documentation
 - **`.github/`** — GitHub Actions workflows and PR/issue templates
@@ -31,11 +31,15 @@ The spec is published here at `api-reference/turbo-smtp.yaml`, synced from the s
 
 The `api-reference/` folder contains a Swagger UI deployment that mirrors `../turbo-smtp-openapi/turbo-api-2/`.
 
-Whenever the OpenAPI spec or Swagger UI assets are updated in `turbo-api-2/`, sync the changes to `api-reference/`:
+`turbo-api-2/` now serves a **single pre-bundled** `turbo-smtp.yaml` (produced upstream by `redocly bundle` from the multi-file source in `openapi-definitions/`) — there is no `Domains/` folder in the served copies. Serving one file with only internal `$ref`s makes Swagger UI load with a single request instead of fetching ~10 files, which is the main render-speed win.
 
-1. Verify the spec is valid: `npx @redocly/cli lint ../turbo-smtp-openapi/turbo-api-2/turbo-smtp.yaml`
-2. Copy updated files: `Copy-Item -Path "../turbo-smtp-openapi/turbo-api-2/*" -Destination "./api-reference/" -Recurse -Force`
+Whenever the served spec or Swagger UI assets are updated in `turbo-api-2/`, sync the changes to `api-reference/`:
+
+1. Verify the bundled spec is valid: `npx @redocly/cli lint ../turbo-smtp-openapi/turbo-api-2/turbo-smtp.yaml`
+2. Copy updated files: `Copy-Item -Path "../turbo-smtp-openapi/turbo-api-2/*" -Destination "./api-reference/" -Recurse -Force` (ensure `api-reference/` has no stale `Domains/` folder)
 3. Commit and push: `git add api-reference/; git commit -m "sync: update API docs from turbo-api-2"`
+
+> `api-reference/turbo-smtp.yaml` is a generated bundle — never hand-edit it. Edit the multi-file source in `../turbo-smtp-openapi/openapi-definitions/` and re-bundle.
 
 ## Documentation Standards
 

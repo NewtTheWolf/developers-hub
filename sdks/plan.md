@@ -1,0 +1,115 @@
+# SDK Generation Strategy for the TurboSMTP API
+
+## Context
+
+We have a finalized OpenAPI 3.1 spec (canonical in `turbo-smtp-openapi/`, synced into `developers-hub/api-reference/turbo-smtp.yaml`). We want client libraries in **five languages** — Node.js/TypeScript, Python, C#, Go, PHP — for external developers.
+
+Goals and constraints:
+- **Ease of use is the priority** — curated, idiomatic surface, not raw generated plumbing.
+- **Features need not map 1:1 to endpoints** — composed convenience (auto-pagination, retries, orchestrated helpers, hidden dual-auth).
+- **Consistency across all five languages** — one architecture. Existing C#/PHP SDKs are rebuilt from scratch alongside the rest.
+- **Incremental, priority-driven rollout** — ship the most valuable features first, add the rest over time, and be free to never implement low-value ones.
+- **Don't over-engineer**; keep the ability to **expand the API and re-derive SDKs** cheaply.
+
+**Fixed decisions:**
+1. **Tooling = OpenAPI Generator (free/OSS).** No paid generators — cost is a hard no.
+2. **Home = `developers-hub/sdks/`.** This repo is the single source for docs **and** SDK source **and** all developer material. No separate SDK repo.
+3. **Packaging = one unified package per language** (not separate feature packages). Feature domains are **namespaces within it** (`turbo.mail`, `turbo.validation`, …), shipped incrementally by priority. Internal organization is idiomatic per language.
+
+## Approach: Generated Core + Curated Facade (free stack)
+
+A **three-layer architecture per language**, kept deliberately thin, anchored by a **language-agnostic contract** for consistency.
+
+### Layer 1 — Generated Core (transport + models + per-operation methods)
+Produced by **OpenAPI Generator** from the spec; regenerated when the spec changes. Handles HTTP, (de)serialization, auth headers, models/types, multipart, pagination primitives. **Committed** to `sdks/packages/<lang>/`. Generation is **partitioned by domain** (see below).
+
+### Layer 2 — Curated Convenience Facade (thin, hand/AI-authored)
+The unified `TurboClient` developers touch — where **features diverge from endpoints 1:1**:
+- Single-credential init; domain **namespaces** `.mail` / `.validation` / `.analytics` / `.suppressions` / `.subaccounts`.
+- **Hide the dual-auth rules**: one credential object; the SDK routes `consumerKey`/`consumerSecret` vs `Authorization` per operation (e.g. `/mail/send` requires the former and rejects the latter — the developer never learns this).
+- **Region/multi-server** as a constructor option (mirrors the old C# `SetRegion()`), including the EU override on `/mail/send`.
+- **Composed helpers** orchestrating multiple endpoints, e.g. `validation.validateList(file)` = upload → validate → poll → fetch; bulk-suppression convenience wrappers.
+- **Auto-pagination iterators** over the `{count, results}` + `page`/`limit` pattern.
+- **Retries/backoff** and typed errors.
+
+The facade is **strictly bounded by the contract** — no ad-hoc surface — and composed helpers are the only non-trivial logic. That is what keeps it from over-engineering.
+
+### Layer 3 — Tests, examples, docs
+Contract-conformance tests + a few idiomatic examples per language (AI-assisted), run in CI against a spec-derived mock server (and gated live smoke tests). Feeds the existing `sdks/*.md` guides.
+
+### Keystone: the language-agnostic SDK contract
+Before any language code, formalize **`sdks/client-contract.md`**: canonical namespaces, method names, parameter/return shapes, error taxonomy, composed-helper inventory, auth/region behavior — **and a priority tier per domain**. Every SDK must satisfy it. This is the cheapest guarantee of cross-language consistency, the reference for the shared test matrix, and the safeguard against OpenAPI Generator's five naming conventions drifting apart.
+
+## Packaging & incremental rollout
+
+**One unified package per language; domains are namespaces; ship by priority.** A developer always does a single install and gets a single `TurboClient`; capabilities grow version over version. Unused domains cost effectively nothing (JS tree-shaking, Go/Python selective import). This delivers the modular *experience* (feature grouping, priority rollout) without an N-package × 5-language release matrix — and it fits every language idiomatically, unlike bolt-on "extension" packages (which only work cleanly in C# and are impossible in Go).
+
+Priority tiers (encoded in the contract; refine as we go):
+- **P0 — Mail sending** (`/mail/send`). Ship first, end-to-end, as the reference SDK.
+- **P1 — Email validation** (`/emailvalidation/*`), incl. the composed `validateList` helper.
+- **P2 — Analytics, Suppressions, Subaccounts, Account/consumer-key & auth** (account status lives here).
+- **P3 / maybe-never — Billing / credit purchase** (`/billing/*`), Alerts, Meta. Implement only if justified.
+
+**Generation is partitioned by domain** (our spec is already split as `Domains/*.yaml`; OpenAPI Generator can filter by tag/operation). This makes adding a later tier a clean additive change and keeps a *future* true package split (e.g. a C#/Node "mailing-only" package) possible with no redesign — explicitly deferred, not built now.
+
+## Tooling: OpenAPI Generator, with a spec-preprocessing pipeline
+
+The real risk with the free stack: **OpenAPI Generator's OpenAPI 3.1 support is still incomplete in 2026**, and our spec is 3.1-native (`type: [string,"null"]`, `unevaluatedProperties`, strict `additionalProperties`) and multi-file. Mitigate with a deterministic preprocessing step (canonical spec stays 3.1 for docs/Swagger UI):
+
+1. **Bundle** the multi-file spec — `npx @redocly/cli bundle` (redocly already used for lint) → `sdks/build/turbo-smtp.bundled.yaml`.
+2. **Spike 3.1 directly** on the latest OpenAPI Generator. If a language generator breaks on 3.1-only constructs, add a **3.1→3.0.3 down-convert** step (generator input only) and re-run. Add this shim only if the spike proves it necessary.
+3. Generate per language + per domain with a pinned generator version (`sdks/openapitools.json`) and per-language config (`sdks/config/<lang>.yaml`).
+
+**Free per-language fallback** if OpenAPI Generator can't produce usable core for one language: Microsoft **Kiota** (also free/OSS, stronger for C#/Go). Contingency, not the backbone.
+
+## Repository layout (all inside `developers-hub`)
+
+This repo shifts from docs-only to **docs + SDK source**; language toolchains and publish CI are added, scoped to `sdks/` so the Pages pipeline is unaffected. Existing `sdks/*.md` guides stay; source is isolated under `packages/`:
+
+```
+sdks/
+  plan.md                     # this document
+  client-contract.md          # keystone contract, incl. priority tiers
+  index.md, nodejs.md, ...    # EXISTING guides — updated once packages are real
+  openapitools.json           # pinned generator version
+  config/<lang>.yaml          # per-language + per-domain generator config
+  templates/<lang>/           # custom Mustache templates (only if needed for DX)
+  build/                      # bundled/preprocessed spec (git-ignored)
+  packages/
+    node/  python/  csharp/  go/  php/   # Layer 1 (generated, domain-partitioned) + Layer 2 (facade) + Layer 3 (tests)
+  scripts/                    # bundle + generate + downconvert-if-needed
+```
+
+- **Spec source for generation:** the in-repo `api-reference/turbo-smtp.yaml` (keeps `developers-hub` self-contained in CI). It continues to sync from `turbo-smtp-openapi/` per the existing CLAUDE.md step.
+- **Regeneration:** a new `.github/workflows/generate-sdks.yml` runs bundle → generate on spec change and opens a PR with the regenerated Layer 1. Layer 2 facade is untouched by regen; only genuinely new domains/endpoints need facade additions.
+- **Publishing:** per-language CI publishes to npm / PyPI / NuGet / pkg.go.dev / Packagist on tagged release.
+
+## Execution phases (priority-driven, interactive)
+
+1. **Save this plan** to `sdks/plan.md`. ✅
+2. **Contract first** — author `sdks/client-contract.md` including priority tiers. Review before code.
+3. **Preprocessing spike** — add `sdks/scripts` + `openapitools.json`; bundle the spec; confirm OpenAPI Generator handles our 3.1 constructs, adding the down-convert shim only if needed.
+4. **P0 reference SDK — Node/TS, Mail only** — generate Layer 1 for the Mail domain into `packages/node/`; hand/AI-author Layer 2 `turbo.mail` to satisfy the contract; Layer 3 tests + examples; publish `@turbosmtp/sdk`. This proves the whole pipeline on the highest-value feature.
+5. **P0 across the other four** — same pipeline, Mail domain, each conforming to the contract; reuse CI.
+6. **Add domains by priority, interactively** — P1 validation next (incl. `validateList`), then P2, pausing between tiers so we decide what's worth shipping (P3 may be skipped). Each addition is an additive, domain-partitioned regen + facade extension across all five.
+7. **Docs** — rewrite `sdks/*.md` guides against the real published packages as each tier lands (fixing today's aspirational install snippets).
+
+## Verification
+
+- **Contract conformance:** a shared test matrix (same scenarios per language) asserting each SDK exposes the contracted surface and behavior for the domains shipped so far.
+- **Mock server** generated from the OpenAPI spec (e.g. Prism) in CI — no live credentials for the bulk of tests.
+- **Live smoke tests** for a few real flows (send first; validate-email once P1 lands) against a sandbox using the stored `CONSUMER_KEY`/`CONSUMER_SECRET`, gated to avoid spamming.
+- **Spec-drift guard:** CI re-runs bundle → generate and fails if committed Layer 1 is stale, so SDKs never silently lag the spec.
+- **DX check:** each language's README quickstart must compile/run as-is (examples are tests).
+
+## Risks & mitigations
+- **OpenAPI Generator 3.1 gaps** → bundle + spike first; 3.1→3.0.3 down-convert shim only if needed; Kiota as free per-language fallback.
+- **Thicker hand-written facade than paid tools would need** → bound the facade strictly by `client-contract.md`; composed helpers are the only non-trivial code; shared conformance matrix keeps all five aligned.
+- **Namespace drift across languages / tiers** → the contract doc + shared test matrix are the single source of consistency.
+- **Repo scope creep** (docs repo now carries build/publish CI) → isolate language toolchains under `sdks/packages/` and `sdks/`-scoped workflows.
+- **Priority reversals** (a deferred domain becomes urgent) → domain-partitioned generation makes any tier an additive change; no reordering cost.
+- **Composed helpers depend on endpoint chains** (e.g. validate-list polling) → live only in Layer 2, contract-specified, reviewed and tested deliberately.
+
+## Sources
+- [openapi-generator releases / 3.1 issue #9083](https://github.com/OpenAPITools/openapi-generator/issues/9083)
+- [Microsoft Kiota](https://github.com/microsoft/kiota)

@@ -1,0 +1,10 @@
+# OpenAPI Generator config — Go (Layer 1 generated core)
+# Flavor: go (standard). nullable fields map to Nullable<T> wrappers (verified in 1.3 spike).
+# See sdks/config/README.md for rationale, layout, and the domain-partitioning approach.
+generatorName: go
+additionalProperties:
+  packageName: generated             # Layer 1 package; the facade owns the public `turbosmtp` package + go.mod
+  packageVersion: 0.1.0
+  withGoMod: false                   # facade owns the module (go.mod); Layer 1 is an internal package
+  isGoSubmodule: false
+  enumUnknownDefaultCase: true       # forward-compat for unknown enum values

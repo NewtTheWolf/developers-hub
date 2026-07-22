@@ -1,0 +1,10 @@
+# OpenAPI Generator config — Python (Layer 1 generated core)
+# Flavor: python (pydantic v2 models; urllib3 transport). Async facade is a later addition (see contract §3.1).
+# See sdks/config/README.md for rationale, layout, and the domain-partitioning approach.
+generatorName: python
+additionalProperties:
+  packageName: turbosmtp._generated  # internal namespace; the hand-written facade owns the public `turbosmtp` entrypoint
+  projectName: turbosmtp
+  packageVersion: 0.1.0
+  library: urllib3
+  generateSourceCodeOnly: true       # emit package source only; facade repo owns pyproject/packaging/tests

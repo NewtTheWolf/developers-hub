@@ -1,0 +1,10 @@
+# OpenAPI Generator config — Node.js / TypeScript (Layer 1 generated core)
+# Flavor: typescript-fetch (native fetch; no axios dep; works Node 18+ and browsers)
+# See sdks/config/README.md for rationale, layout, and the domain-partitioning approach.
+generatorName: typescript-fetch
+additionalProperties:
+  npmName: "@turbosmtp/sdk"          # public package; facade owns package.json (Layer 1 emitted to src/generated)
+  npmVersion: 0.1.0
+  supportsES6: true
+  useSingleRequestParameter: true    # single object param — matches the facade's option-object style
+  enumUnknownDefaultCase: true       # forward-compat: unknown enum values (status/sub_status) don't break deserialization

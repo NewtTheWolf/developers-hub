@@ -1,0 +1,8 @@
+# OpenAPI Generator config — PHP (Layer 1 generated core)
+# Flavor: php (standard, Guzzle transport).
+# See sdks/config/README.md for rationale, layout, and the domain-partitioning approach.
+generatorName: php
+additionalProperties:
+  invokerPackage: "TurboSMTP\\Generated"  # internal namespace; the facade owns the public `TurboSMTP` namespace
+  packageName: turbosmtp
+  enumUnknownDefaultCase: true            # forward-compat for unknown enum values

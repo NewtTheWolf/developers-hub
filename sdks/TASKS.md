@@ -31,7 +31,7 @@ repo-level [`../TASKS.md`](../TASKS.md) — reconcile that file's 3.1–3.20 int
 
 | # | Task | Status | Weeks Effort | Notes |
 |---|---|---|---|---|
-| 1.1 | Pin generator version (`sdks/openapitools.json`) | PENDING | | openapi-generator-cli, pinned |
+| 1.1 | Pin generator version (`sdks/openapitools.json`) | DONE | | npm wrapper `@openapitools/openapi-generator-cli`; generator pinned to **7.24.0** (latest) |
 | 1.2 | Bundle multi-file spec → `sdks/build/turbo-smtp.bundled.yaml` | PENDING | | `npx @redocly/cli bundle` on `api-reference/turbo-smtp.yaml` |
 | 1.3 | Spike generation on the 3.1 spec across all 5 languages | PENDING | 1 | Identify which languages break on 3.1-only constructs (`type:[x,"null"]`, `unevaluatedProperties`). Depends on 1.1–1.2 |
 | 1.4 | Add 3.1→3.0.3 down-convert shim **(only if 1.3 requires)** | PENDING | | Generator input only; canonical spec stays 3.1. Conditional on 1.3 |

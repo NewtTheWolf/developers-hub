@@ -33,8 +33,8 @@ repo-level [`../TASKS.md`](../TASKS.md) — reconcile that file's 3.1–3.20 int
 |---|---|---|---|---|
 | 1.1 | Pin generator version (`sdks/openapitools.json`) | DONE | | npm wrapper `@openapitools/openapi-generator-cli`; generator pinned to **7.24.0** (latest) |
 | 1.2 | Bundle multi-file spec → `sdks/build/turbo-smtp.bundled.yaml` | DONE | | `npx @redocly/cli bundle` on `api-reference/turbo-smtp.yaml`. Output self-contained (0 external `$ref`s), OAS 3.1.0, lint-valid (2 warnings). `sdks/build/` git-ignored. Note: `unevaluatedProperties:false` present → 3.1 risk to verify in 1.3 |
-| 1.3 | Spike generation on the 3.1 spec across all 5 languages | PENDING | 1 | Identify which languages break on 3.1-only constructs (`type:[x,"null"]`, `unevaluatedProperties`). Depends on 1.1–1.2 |
-| 1.4 | Add 3.1→3.0.3 down-convert shim **(only if 1.3 requires)** | PENDING | | Generator input only; canonical spec stays 3.1. Conditional on 1.3 |
+| 1.3 | Spike generation on the 3.1 spec across all 5 languages | DONE | 1 | **All 5 pass with generator 7.24.0 (Java 17).** `type:[x,"null"]`→ TS `string\|null`, Go `NullableString`, Python `Optional`; `unevaluatedProperties` generated cleanly everywhere. C#/Go both fine → **Kiota fallback not needed**. Flavors spiked: `typescript-fetch`/`python`/`csharp`/`go`/`php`. Caveat: default `skipFormModel` drops multipart upload models (revisit in 1.5 for P1 upload / P2 import). "3.1 beta" banner only |
+| 1.4 | Add 3.1→3.0.3 down-convert shim **(only if 1.3 requires)** | DONE | | **Not required** — 1.3 proved native 3.1 support across all 5 generators. No shim added; canonical spec stays 3.1. Revisit only if a future spec construct breaks a generator |
 | 1.5 | Per-language + per-domain generator config (`sdks/config/<lang>.yaml`) | PENDING | | Domain-partitioned (filter by tag/operation) |
 | 1.6 | Generation script (`sdks/scripts/`) — bundle → (downconvert?) → generate | PENDING | | Reproducible locally and in CI. Depends on 1.2–1.5 |
 

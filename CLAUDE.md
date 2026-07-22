@@ -12,7 +12,7 @@ Content is authored in Markdown and published via GitHub Pages. This is a docs-a
 
 - **`docs/`** — Topic guides (getting-started, transactional, validation, webhooks)
 - **`api-reference/`** — single pre-bundled OpenAPI 3.1 spec (`turbo-smtp.yaml`, no `Domains/` split) + self-contained Swagger UI bundle (deployed to GitHub Pages) + narrative `README.md` overview
-- **`sdks/`** — SDK integration guides per language (Node.js, Python, Go, PHP, C#)
+- **`sdks/`** — SDK effort: strategy/contract/tasks docs, generator config, and (incrementally) generated + facade source per language. See **SDK Development** below
 - **`ai-integrations/`** — MCP Server and Agent Skills documentation
 - **`.github/`** — GitHub Actions workflows and PR/issue templates
   - `workflows/validate-openapi.yml` — Lints OpenAPI spec on push
@@ -40,6 +40,27 @@ Whenever the served spec or Swagger UI assets are updated in `turbo-api-2/`, syn
 3. Commit and push: `git add api-reference/; git commit -m "sync: update API docs from turbo-api-2"`
 
 > `api-reference/turbo-smtp.yaml` is a generated bundle — never hand-edit it. Edit the multi-file source in `../turbo-smtp-openapi/openapi-definitions/` and re-bundle.
+
+## SDK Development (`sdks/`)
+
+The SDK effort lives entirely under `sdks/`. Authoritative docs (read first):
+- `sdks/plan.md` — strategy, 3-layer architecture, tooling, rollout tiers
+- `sdks/client-contract.md` — RATIFIED language-agnostic contract; the facade
+  surface every SDK must satisfy (review-gated; amend before changing any SDK)
+- `sdks/TASKS.md` — executable checklist and per-task outcomes
+
+Tooling & generation:
+- Generator: OpenAPI Generator, pinned in `sdks/openapitools.json` (currently
+  7.24.0) via the npm wrapper `@openapitools/openapi-generator-cli`. Requires a
+  JVM (Java 17 verified).
+- Input is the **bundled** 3.1 spec `sdks/build/turbo-smtp.bundled.yaml`, produced
+  by `npx @redocly/cli bundle api-reference/turbo-smtp.yaml`. Fed to the generator
+  **as 3.1 — no down-convert needed** (all 5 languages handle it natively).
+- `sdks/build/` is git-ignored (regenerated artifacts). Never hand-edit generated
+  Layer 1 code — change the spec upstream and regenerate.
+- Gotcha: the generator's default `skipFormModel=true` drops multipart upload
+  request models — verify multipart when configuring the validation/suppressions/
+  subaccount domains.
 
 ## Documentation Standards
 

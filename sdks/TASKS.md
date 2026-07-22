@@ -21,8 +21,8 @@ repo-level [`../TASKS.md`](../TASKS.md) — reconcile that file's 3.1–3.20 int
 | # | Task | Status | Weeks Effort | Notes |
 |---|---|---|---|---|
 | 0.1 | Author SDK strategy plan (`sdks/plan.md`) | DONE | 0.5 | Architecture, tooling, layout, rollout |
-| 0.2 | Author language-agnostic client contract (`sdks/client-contract.md`) | PENDING | 1 | Namespaces, method/param/return shapes, error taxonomy, auth/region, priority tiers. **Review gate before any code.** Depends on 0.1 |
-| 0.3 | Confirm P0/P1 domain coverage & namespace names | PENDING | | Fold into 0.2; explicitly mark P3 (billing/alerts/meta) as maybe-never |
+| 0.2 | Author language-agnostic client contract (`sdks/client-contract.md`) | DONE | 1 | Namespaces, method/param/return shapes, error taxonomy, auth/region, priority tiers. **Review gate passed — code unblocked.** Depends on 0.1 |
+| 0.3 | Confirm P0/P1 domain coverage & namespace names | DONE | | Folded into 0.2 §6: namespaces `mail`/`validation`/`analytics`/`suppressions`/`subaccounts`/`account`; P3 (billing/alerts/meta) marked maybe-never; orphaned ops excluded |
 
 ---
 

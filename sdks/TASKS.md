@@ -45,7 +45,7 @@ repo-level [`../TASKS.md`](../TASKS.md) — reconcile that file's 3.1–3.20 int
 
 | # | Task | Status | Weeks Effort | Notes |
 |---|---|---|---|---|
-| 2.1 | Generate Layer 1 (Mail domain) → `sdks/packages/node/` | PENDING | | Transport + models. Depends on 1.6, 0.2 |
+| 2.1 | Generate Layer 1 (Mail domain) → `sdks/packages/node/` | DONE | | Ran `generate.mjs --lang=node` → Layer 1 in `packages/node/src/generated/`: `MailApi.sendEmail` (`POST /mail/send`), models `MailMessage`/`Attachment`/`Send{Sucess,BadRequest,Unauthorized}ResponseBody`, `runtime.ts`. Type-checks clean (tsc strict, es2018+dom). `/mail/send` is **JSON** (attachments = array of base64 `Attachment` objects) → `skipFormModel` gotcha N/A for P0. All 3 auth headers wired (facade hides dual-auth). Generator emitted a nested package layout (`package.json`/`tsconfig*`) in `src/generated/` — ignore; facade owns packaging at 2.2. Facade must map contract shape: `to`/`cc`/`bcc` arrays→comma-strings, `text`→`content`, `html`→`html_content`. **Send-body schema renamed upstream `Email`→`MailMessage`** (was bundling as the collision artifact `Email2`; fixed in `turbo-smtp-openapi` Mail.yaml — wire contract unchanged, proven by normalized bundle diff) |
 | 2.2 | Author Layer 2 facade — `client.mail.send` per contract | PENDING | 1 | Arrays for to/cc/bcc, `text`/`html`, `replyTo`, byte attachments, `messageId` as string, region/EU host, dual-auth hidden. Depends on 2.1, 0.2 |
 | 2.3 | Layer 3 tests — P0 conformance scenarios | PENDING | | The 8 scenarios in contract §3.3. Depends on 2.2 |
 | 2.4 | Examples + README quickstart (must compile/run) | PENDING | | Depends on 2.2 |

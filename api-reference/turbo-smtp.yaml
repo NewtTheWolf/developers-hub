@@ -447,7 +447,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Email-2'
+              $ref: '#/components/schemas/MailMessage'
             examples:
               Short:
                 summary: Simple Email Send Request Body
@@ -2781,7 +2781,7 @@ components:
               - SEND_API
               - APIS
     EmailRequestBody:
-      $ref: '#/components/schemas/Email-2'
+      $ref: '#/components/schemas/MailMessage'
     SendSucessResponsetBody:
       type: object
       additionalProperties: false
@@ -3277,7 +3277,7 @@ components:
           type: string
           description: mime type of the content you are attaching
           example: image/gif
-    Email-2:
+    MailMessage:
       type: object
       additionalProperties: false
       required:

@@ -127,7 +127,7 @@ Every SDK's Layer 3 tests must cover these **8 scenarios**. They run against the
 
 | # | Scenario | Asserts |
 |---|---|---|
-| 1 | **Minimal send** — `from`, `to`, `subject`, `text` | 200; returns `messageId` (non-empty string); body maps to `Email-2` with `content` set |
+| 1 | **Minimal send** — `from`, `to`, `subject`, `text` | 200; returns `messageId` (non-empty string); body maps to `MailMessage` with `content` set |
 | 2 | **HTML send** — `from`, `to`, `subject`, `html` | 200; `html` maps to `html_content`; `content` omitted |
 | 3 | **Multi-recipient arrays** — `to`/`cc`/`bcc` as arrays of ≥2 | serialized request has comma-joined CSV strings for `to`/`cc`/`bcc` |
 | 4 | **Reply-To mapping** — `replyTo` set | serialized `custom_headers["reply-to"]` equals the value; no top-level `replyTo` reaches the wire |
@@ -194,7 +194,7 @@ Framework-level policy, configurable via `maxRetries` (default small, e.g. 2):
 ## 4. P0 — Mail domain (full detail)
 
 **Namespace:** `mail`. **Method:** `send`. **Backing operation:** `sendEmail` — `POST /mail/send`,
-request schema `Email-2`, success `SendSucessResponsetBody`.
+request schema `MailMessage`, success `SendSucessResponsetBody`.
 
 ### 4.1 Parameter shape (idiomatic facade)
 
@@ -217,9 +217,9 @@ request schema `Email-2`, success `SendSucessResponsetBody`.
 **Attachment** (facade): `{ content: bytes, filename: string, contentType: string, contentId?: string }`.
 The SDK base64-encodes `content` — the developer never handles base64.
 
-### 4.2 Mapping → `Email-2` (Layer 2 → wire)
+### 4.2 Mapping → `MailMessage` (Layer 2 → wire)
 
-| Facade | → | `Email-2` / `attachment` field | Transform |
+| Facade | → | `MailMessage` / `attachment` field | Transform |
 |---|---|---|---|
 | `from` | → | `from` | passthrough |
 | `to` / `cc` / `bcc` | → | `to` / `cc` / `bcc` | **array → comma-joined CSV string** |

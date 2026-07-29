@@ -1,0 +1,28 @@
+{
+  "name": "@turbosmtp/sdk",
+  "version": "0.1.0",
+  "description": "Official TurboSMTP SDK for Node.js and TypeScript.",
+  "license": "MIT",
+  "author": "TurboSMTP <api@turbo-smtp.com>",
+  "homepage": "https://serversmtp.com/email-sdks-for-developers",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/turbosmtp/turbosmtp-node.git"
+  },
+  "keywords": ["turbosmtp", "email", "smtp", "transactional-email", "sdk"],
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "src", "!src/**/*.test.ts"],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

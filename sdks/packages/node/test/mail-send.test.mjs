@@ -1,0 +1,218 @@
+/**
+ * P0 Mail — Layer 3 conformance tests (client-contract.md §3.3).
+ *
+ * The eight numbered scenarios below map 1:1 to the contract's conformance
+ * matrix; the numbering is stable (§3.3 mandates exactly eight). A few extra
+ * tests cover cross-cutting behavior (config validation, network errors).
+ *
+ * Run: `npm test` (builds first, then `node --test`). Imports the built facade
+ * from ../dist so the tests exercise the real published entry point.
+ */
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+
+import {
+  TurboSMTPClient,
+  TurboSMTPError,
+  AuthenticationError,
+  BadRequestError,
+  NetworkError,
+} from '../dist/index.js';
+
+import { makeFetch, makeThrowingFetch, lastBody, lastHeaders, lastUrl } from './helpers.mjs';
+
+const creds = { consumerKey: 'ck', consumerSecret: 'cs' };
+const clientWith = (fetchApi, extra = {}) => new TurboSMTPClient({ ...creds, fetchApi, ...extra });
+
+// §3.3.1 — Minimal send -------------------------------------------------------
+test('§3.3.1 minimal send returns messageId and maps text→content', async () => {
+  // Raw string body so the exact 64-bit digits reach the SDK (a real server sends this).
+  const fetchApi = makeFetch(200, '{"message":"OK","mid":9007199254740993}');
+  const client = clientWith(fetchApi);
+
+  const res = await client.mail.send({ from: 'a@x.com', to: ['b@y.com'], subject: 'Hi', text: 'hello' });
+
+  assert.equal(typeof res.messageId, 'string');
+  assert.ok(res.messageId.length > 0, 'messageId is non-empty');
+  assert.equal(res.messageId, '9007199254740993', 'preserves 64-bit id without float rounding');
+
+  const body = lastBody(fetchApi);
+  assert.equal(body.content, 'hello');
+  assert.equal(body.from, 'a@x.com');
+  assert.equal(body.to, 'b@y.com');
+
+  // Auth is hidden: both consumer headers sent, Authorization never sent.
+  const headers = lastHeaders(fetchApi);
+  assert.equal(headers.consumerKey, 'ck');
+  assert.equal(headers.consumerSecret, 'cs');
+  assert.ok(!('Authorization' in headers), 'Authorization must never be sent to /mail/send');
+
+  // Default region → global send host.
+  assert.equal(lastUrl(fetchApi), 'https://api.turbo-smtp.com/api/v2/mail/send');
+});
+
+// §3.3.2 — HTML send ----------------------------------------------------------
+test('§3.3.2 HTML send maps html→html_content and omits content', async () => {
+  const fetchApi = makeFetch(200, { message: 'OK', mid: 42 });
+  const client = clientWith(fetchApi);
+
+  await client.mail.send({ from: 'a@x.com', to: ['b@y.com'], subject: 'Hi', html: '<b>hi</b>' });
+
+  const body = lastBody(fetchApi);
+  assert.equal(body.html_content, '<b>hi</b>');
+  assert.ok(!('content' in body), 'content omitted when only html is given');
+});
+
+// §3.3.3 — Multi-recipient arrays → CSV --------------------------------------
+test('§3.3.3 to/cc/bcc arrays serialize as comma-joined CSV', async () => {
+  const fetchApi = makeFetch(200, { message: 'OK', mid: 1 });
+  const client = clientWith(fetchApi);
+
+  await client.mail.send({
+    from: 'a@x.com',
+    to: ['b@y.com', 'c@y.com'],
+    cc: ['d@y.com', 'e@y.com'],
+    bcc: ['f@y.com', 'g@y.com'],
+    text: 'x',
+  });
+
+  const body = lastBody(fetchApi);
+  assert.equal(body.to, 'b@y.com,c@y.com');
+  assert.equal(body.cc, 'd@y.com,e@y.com');
+  assert.equal(body.bcc, 'f@y.com,g@y.com');
+});
+
+// §3.3.4 — Reply-To mapping ---------------------------------------------------
+test('§3.3.4 replyTo maps to custom_headers["reply-to"] and never leaks top-level', async () => {
+  const fetchApi = makeFetch(200, { message: 'OK', mid: 1 });
+  const client = clientWith(fetchApi);
+
+  await client.mail.send({
+    from: 'a@x.com',
+    to: ['b@y.com'],
+    text: 'x',
+    replyTo: 'reply@x.com',
+    headers: { 'X-Foo': 'bar' },
+  });
+
+  const body = lastBody(fetchApi);
+  assert.equal(body.custom_headers['reply-to'], 'reply@x.com');
+  assert.equal(body.custom_headers['X-Foo'], 'bar', 'explicit headers merged alongside replyTo');
+  assert.ok(!('replyTo' in body) && !('reply_to' in body), 'no top-level replyTo on the wire');
+});
+
+test('§3.3.4b explicit replyTo wins over a reply-to key in headers', async () => {
+  const fetchApi = makeFetch(200, { message: 'OK', mid: 1 });
+  const client = clientWith(fetchApi);
+
+  await client.mail.send({
+    from: 'a@x.com',
+    to: ['b@y.com'],
+    text: 'x',
+    replyTo: 'winner@x.com',
+    headers: { 'reply-to': 'loser@x.com' },
+  });
+
+  assert.equal(lastBody(fetchApi).custom_headers['reply-to'], 'winner@x.com');
+});
+
+// §3.3.5 — Byte attachment → base64 ------------------------------------------
+test('§3.3.5 byte attachment is base64-encoded with renamed fields', async () => {
+  const fetchApi = makeFetch(200, { message: 'OK', mid: 1 });
+  const client = clientWith(fetchApi);
+
+  const bytes = new Uint8Array([104, 101, 108, 108, 111]); // "hello"
+  await client.mail.send({
+    from: 'a@x.com',
+    to: ['b@y.com'],
+    text: 'x',
+    attachments: [{ content: bytes, filename: 'h.txt', contentType: 'text/plain', contentId: 'cid1' }],
+  });
+
+  const att = lastBody(fetchApi).attachments[0];
+  assert.equal(att.content, 'aGVsbG8=', 'content is base64 of the raw bytes');
+  assert.equal(att.name, 'h.txt', 'filename → name');
+  assert.equal(att.type, 'text/plain', 'contentType → type');
+  assert.equal(att.content_id, 'cid1', 'contentId → content_id');
+});
+
+test('§3.3.5b attachment without contentId omits content_id', async () => {
+  const fetchApi = makeFetch(200, { message: 'OK', mid: 1 });
+  const client = clientWith(fetchApi);
+
+  await client.mail.send({
+    from: 'a@x.com',
+    to: ['b@y.com'],
+    text: 'x',
+    attachments: [{ content: new Uint8Array([1, 2, 3]), filename: 'a.bin', contentType: 'application/octet-stream' }],
+  });
+
+  const att = lastBody(fetchApi).attachments[0];
+  assert.ok(!('content_id' in att), 'content_id omitted when contentId not provided');
+});
+
+// §3.3.6 — Region routing -----------------------------------------------------
+test('§3.3.6 region:"eu" targets the EU host; global targets the global host', async () => {
+  const euFetch = makeFetch(200, { message: 'OK', mid: 1 });
+  await clientWith(euFetch, { region: 'eu' }).mail.send({ from: 'a@x.com', to: ['b@y.com'], text: 'x' });
+  assert.equal(lastUrl(euFetch), 'https://api.eu.turbo-smtp.com/api/v2/mail/send');
+
+  const globalFetch = makeFetch(200, { message: 'OK', mid: 1 });
+  await clientWith(globalFetch, { region: 'global' }).mail.send({ from: 'a@x.com', to: ['b@y.com'], text: 'x' });
+  assert.equal(lastUrl(globalFetch), 'https://api.turbo-smtp.com/api/v2/mail/send');
+});
+
+// §3.3.7 — Auth failure (401) -------------------------------------------------
+test('§3.3.7 a 401 throws AuthenticationError carrying errorCode/message/details', async () => {
+  const fetchApi = makeFetch(401, { errorCode: 7, message: 'unauthorized', details: 'bad key' });
+  const client = clientWith(fetchApi);
+
+  await assert.rejects(
+    () => client.mail.send({ from: 'a@x.com', to: ['b@y.com'], text: 'x' }),
+    (err) => {
+      assert.ok(err instanceof AuthenticationError);
+      assert.ok(err instanceof TurboSMTPError, 'subclass of the base error');
+      assert.equal(err.status, 401);
+      assert.equal(err.errorCode, 7);
+      assert.equal(err.message, 'unauthorized');
+      assert.equal(err.details, 'bad key');
+      return true;
+    },
+  );
+});
+
+// §3.3.8 — Validation error (400) --------------------------------------------
+test('§3.3.8 a 400 throws BadRequestError exposing the errors[] array', async () => {
+  const fetchApi = makeFetch(400, { message: 'bad request', errors: ['from required', 'nocredit'] });
+  const client = clientWith(fetchApi);
+
+  await assert.rejects(
+    () => client.mail.send({ from: '', to: [], text: 'x' }),
+    (err) => {
+      assert.ok(err instanceof BadRequestError);
+      assert.equal(err.status, 400);
+      assert.deepEqual(err.errors, ['from required', 'nocredit']);
+      return true;
+    },
+  );
+});
+
+// --- Extra coverage (not numbered scenarios) --------------------------------
+test('constructor rejects missing credentials with TurboSMTPError', () => {
+  assert.throws(() => new TurboSMTPClient({ consumerKey: 'ck' }), TurboSMTPError);
+  assert.throws(() => new TurboSMTPClient({ consumerSecret: 'cs' }), TurboSMTPError);
+  assert.throws(() => new TurboSMTPClient({}), TurboSMTPError);
+});
+
+test('transport failure maps to NetworkError (status null)', async () => {
+  const client = clientWith(makeThrowingFetch());
+
+  await assert.rejects(
+    () => client.mail.send({ from: 'a@x.com', to: ['b@y.com'], text: 'x' }),
+    (err) => {
+      assert.ok(err instanceof NetworkError);
+      assert.equal(err.status, null);
+      return true;
+    },
+  );
+});

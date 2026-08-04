@@ -20,6 +20,7 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
+    "typecheck:examples": "tsc --noEmit -p examples/tsconfig.json",
     "pretest": "npm run build",
     "test": "node --test test/*.test.mjs",
     "prepublishOnly": "npm run build"

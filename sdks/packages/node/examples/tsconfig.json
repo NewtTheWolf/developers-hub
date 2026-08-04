@@ -1,0 +1,20 @@
+{
+  // Isolated type-check for the TypeScript examples (run: npm run typecheck:examples).
+  // Standalone (does not extend the root config) so it can enable noEmit and avoid
+  // the library's rootDir/declaration settings. Mirrors the root compiler options
+  // that matter for the facade's types (ES2020 + DOM lib gives fetch/Response/atob/
+  // TextEncoder). Node globals (`process`) come from the local ts/_env.d.ts shim,
+  // so the examples type-check without pulling @types/node into the SDK build.
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2020", "DOM"],
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["ts/**/*.ts"]
+}

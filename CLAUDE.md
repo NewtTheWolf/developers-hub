@@ -48,6 +48,10 @@ The SDK effort lives entirely under `sdks/`. Authoritative docs (read first):
 - `sdks/client-contract.md` — RATIFIED language-agnostic contract; the facade
   surface every SDK must satisfy (review-gated; amend before changing any SDK)
 - `sdks/TASKS.md` — executable checklist and per-task outcomes
+- `sdks/pipeline.md` — operational flow (mermaid): canonical spec → sync → generate →
+  facade → tests → tag → registries + mirrors; includes what is automated vs manual
+- `sdks/docs/adr/` — Architecture Decision Records; ADR-0003 fixes the repo/publish
+  topology, ADR-0004 the build-toolchain version policy
 
 Tooling & generation:
 - Generator: OpenAPI Generator, pinned in `sdks/openapitools.json` (currently

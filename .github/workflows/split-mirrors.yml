@@ -32,12 +32,30 @@ jobs:
   split:
     runs-on: ubuntu-latest
     steps:
+      # Fail in seconds on a missing secret rather than after the split, and never
+      # print the value — only its length, which is enough to tell empty from set.
+      - name: Verify MIRROR_TOKEN is present
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${MIRROR_TOKEN:-}" ]; then
+            echo "::error::MIRROR_TOKEN is empty or unset. Set it under developers-hub → Settings → Secrets and variables → Actions. Note that a non-interactive \`gh secret set\` can store an empty value."
+            exit 1
+          fi
+          echo "MIRROR_TOKEN present (${#MIRROR_TOKEN} chars)"
+
       - uses: actions/checkout@v4
         with:
           # `git subtree split` replays the directory's whole history — a shallow
           # clone silently produces a truncated mirror.
           fetch-depth: 0
           ref: ${{ github.event.inputs.tag || github.ref }}
+          # Do NOT leave GITHUB_TOKEN credentials in .git/config. Otherwise a bad or
+          # empty MIRROR_TOKEN falls back to them silently and the push fails as an
+          # opaque "denied to github-actions[bot]" 403 instead of an auth error —
+          # observed on run 31105171893.
+          persist-credentials: false
 
       - name: Resolve language, version and mirror from the tag
         id: target

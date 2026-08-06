@@ -1,5 +1,11 @@
 # @turbosmtp/sdk
 
+> **Source, issues and pull requests live in
+> [turboSMTP/developers-hub](https://github.com/turboSMTP/developers-hub/tree/main/sdks/packages/node).**
+> The [`turbosmtp-node`](https://github.com/turboSMTP/turbosmtp-node) repository is a read-only mirror
+> published automatically on release — changes pushed there are overwritten. Please file issues at
+> [developers-hub/issues](https://github.com/turboSMTP/developers-hub/issues).
+
 The official [TurboSMTP](https://serversmtp.com) SDK for **Node.js and TypeScript** — a small,
 dependency-free client for sending transactional email through the TurboSMTP API.
 

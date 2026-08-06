@@ -69,8 +69,16 @@ Supporting rules:
 4. **Go's `go.mod` and PHP's `composer.json` declare the mirror's identity, not their in-repo
    location.** Go does not require the main module's path to match its directory, so local builds and
    tests are unaffected.
-5. **Mirrors have Issues and Pull Requests disabled** and carry a README banner pointing back to
-   `developers-hub`. All issues land in one tracker.
+5. **Mirrors funnel all contribution back to `developers-hub`.** Issues are disabled and the README
+   carries a read-only banner, so one tracker serves the whole suite.
+
+   > **Factual correction, 2026-08-06.** As first written this clause read "Issues and Pull Requests
+   > disabled". GitHub provides no way to disable pull requests — the repository API exposes
+   > `has_issues`, `has_wiki`, `has_projects` and `has_discussions`, with no pull-request equivalent.
+   > The decision (one tracker, in `developers-hub`) is unchanged; only the stated mechanism was
+   > wrong. Issues are genuinely disabled; unsolicited pull requests are closed with a pointer back,
+   > and could be auto-closed by a workflow if volume ever justified it. Recorded inline rather than
+   > as a superseding ADR because no decision changed.
 
 Implemented by `.github/workflows/split-mirrors.yml`; tracked as `TASKS.md` 4.7.
 
@@ -149,8 +157,9 @@ repository, and would make the release process differ per language for no benefi
 - **`MIRROR_TOKEN` is a broad credential** held in one repository, with write access to all five
   mirrors. Repository-per-language would have allowed per-repository token scoping; this topology
   trades that isolation away.
-- **Read-only mirrors attract contributions.** Disabled Issues and PRs plus README banners mitigate
-  this, but some contributors will still arrive at the wrong repository first.
+- **Read-only mirrors attract contributions.** Disabling Issues and adding README banners mitigates
+  this, but pull requests cannot be disabled at all, so some will arrive on the wrong repository and
+  need closing by hand.
 - **The existing Packagist package `turbosmtp/turbosmtp-client` must be migrated** to point at the new
   `turbosmtp-php` mirror when the rebuilt PHP SDK ships, rather than published fresh.
 - **Go's case-sensitivity is a live trap.** Module paths are case-sensitive while GitHub URLs are

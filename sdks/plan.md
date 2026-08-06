@@ -114,7 +114,7 @@ published guide showing a mixed-case `go get` must be corrected before Go ships 
 
 - **Spec source for generation:** the in-repo `api-reference/turbo-smtp.yaml` (keeps `developers-hub` self-contained in CI). It continues to sync from `turbo-smtp-openapi/` per the existing CLAUDE.md step.
 - **Regeneration:** a new `.github/workflows/generate-sdks.yml` runs bundle → generate on spec change and opens a PR with the regenerated Layer 1. Layer 2 facade is untouched by regen; only genuinely new domains/endpoints need facade additions.
-- **Publishing:** per-language, triggered by a `<lang>/vX.Y.Z` tag. npm / PyPI / NuGet publish directly from this repo; `.github/workflows/split-mirrors.yml` pushes each package subtree to its read-only mirror and translates the tag to unprefixed `vX.Y.Z` — which is how pkg.go.dev and Packagist consume Go and PHP, and what gives every language a clean, discoverable public repo. Mirrors have Issues and PRs disabled; all issues land here.
+- **Publishing:** per-language, triggered by a `<lang>/vX.Y.Z` tag. npm / PyPI / NuGet publish directly from this repo; `.github/workflows/split-mirrors.yml` pushes each package subtree to its read-only mirror and translates the tag to unprefixed `vX.Y.Z` — which is how pkg.go.dev and Packagist consume Go and PHP, and what gives every language a clean, discoverable public repo. Mirrors have Issues disabled and a read-only README banner, so all issues land here. (GitHub cannot disable pull requests — unsolicited ones are closed with a pointer back.)
 
 ## Execution phases (priority-driven, interactive)
 

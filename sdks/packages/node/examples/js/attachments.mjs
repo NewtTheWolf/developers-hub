@@ -11,7 +11,7 @@
  * In your own project: import { TurboSMTPClient } from '@turbosmtp/sdk';
  * Run: node examples/js/attachments.mjs  (build first; set creds).
  */
-import { TurboSMTPClient } from '../../dist/index.js';
+import { TurboSMTPClient } from '../../dist/esm/index.mjs';
 
 // A 1x1 transparent PNG, decoded from base64 to raw bytes.
 const PNG_1X1 =

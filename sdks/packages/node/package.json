@@ -7,18 +7,47 @@
   "homepage": "https://serversmtp.com/email-sdks-for-developers",
   "repository": {
     "type": "git",
-    "url": "https://github.com/turbosmtp/turbosmtp-node.git"
+    "url": "git+https://github.com/turboSMTP/turbosmtp-node.git"
   },
-  "keywords": ["turbosmtp", "email", "smtp", "transactional-email", "sdk"],
+  "bugs": {
+    "url": "https://github.com/turboSMTP/developers-hub/issues"
+  },
+  "keywords": [
+    "turbosmtp",
+    "email",
+    "smtp",
+    "transactional-email",
+    "sdk"
+  ],
   "type": "commonjs",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": ["dist", "src", "!src/**/*.test.ts"],
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.mjs",
+  "types": "./dist/cjs/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/cjs/index.d.ts",
+      "import": "./dist/esm/index.mjs",
+      "require": "./dist/cjs/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src/*.ts",
+    "src/generated/src"
+  ],
+  "sideEffects": false,
   "engines": {
     "node": ">=18"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsc",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build:cjs": "tsc",
+    "build:esm": "esbuild src/index.ts --bundle --packages=external --format=esm --target=es2020 --platform=neutral --outfile=dist/esm/index.mjs --sourcemap",
+    "build": "npm run clean && npm run build:cjs && npm run build:esm",
     "typecheck": "tsc --noEmit",
     "typecheck:examples": "tsc --noEmit -p examples/tsconfig.json",
     "pretest": "npm run build",
@@ -26,6 +55,7 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
-    "typescript": "^5.4.0"
+    "esbuild": "^0.28.1",
+    "typescript": "~7.0.2"
   }
 }

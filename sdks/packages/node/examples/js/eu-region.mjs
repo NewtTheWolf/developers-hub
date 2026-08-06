@@ -7,7 +7,7 @@
  * In your own project: import { TurboSMTPClient } from '@turbosmtp/sdk';
  * Run: node examples/js/eu-region.mjs  (build first; set creds).
  */
-import { TurboSMTPClient } from '../../dist/index.js';
+import { TurboSMTPClient } from '../../dist/esm/index.mjs';
 
 const consumerKey = process.env.CONSUMER_KEY;
 const consumerSecret = process.env.CONSUMER_SECRET;

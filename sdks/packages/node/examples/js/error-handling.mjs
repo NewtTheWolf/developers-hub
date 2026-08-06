@@ -14,7 +14,7 @@ import {
   BadRequestError,
   NetworkError,
   TurboSMTPError,
-} from '../../dist/index.js';
+} from '../../dist/esm/index.mjs';
 
 const consumerKey = process.env.CONSUMER_KEY;
 const consumerSecret = process.env.CONSUMER_SECRET;

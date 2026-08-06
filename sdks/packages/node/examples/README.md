@@ -18,9 +18,12 @@ Each example maps to a conformance scenario in
 | `error-handling` | §3.3.7 / §3.3.8 — 401 and 400 handled by type |
 
 > **In-repo import paths.** These files import the SDK by relative path so they run
-> before the package is published — `js/` from the built `../../dist/index.js`, `ts/`
-> from the source `../../src/index`. In your own project you'd instead write
-> `import { TurboSMTPClient } from '@turbosmtp/sdk';`.
+> before the package is published — `js/` from the built ESM bundle
+> `../../dist/esm/index.mjs`, `ts/` from the source `../../src/index`. In your own
+> project you'd instead write `import { TurboSMTPClient } from '@turbosmtp/sdk';`.
+>
+> The `js/` examples deliberately target the ESM build while the test suite targets
+> the CJS build (`dist/cjs/index.js`), so both published artifacts get exercised.
 
 ---
 

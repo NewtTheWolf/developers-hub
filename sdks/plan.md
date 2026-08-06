@@ -13,8 +13,9 @@ Goals and constraints:
 
 **Fixed decisions:**
 1. **Tooling = OpenAPI Generator (free/OSS).** No paid generators — cost is a hard no.
-2. **Home = `developers-hub/sdks/`.** This repo is the single source for docs **and** SDK source **and** all developer material. No separate SDK repo.
+2. **Development home = `developers-hub/sdks/`.** This repo is the single source for docs **and** SDK source **and** all developer material — one repo to commit to, one regeneration PR, one CI run that sees all five languages at once. There is no separate SDK *development* repo. **Publishing** goes through five CI-generated **read-only mirror repos** (`turbosmtp-node`, `-python`, `-dotnet`, `-go`, `-php`): mirrors are build output, not homes. The registries force this — public Packagist cannot read a `composer.json` from a subdirectory (subdirectory packages are paid Private Packagist only), and a Go module in a subdirectory bakes the repo path into its import path and requires prefixed version tags. Full record, including the rejected alternatives: **[ADR-0003](docs/adr/0003-sdk-repository-topology.md)**; implementation tracked as `TASKS.md` 4.7.
 3. **Packaging = one unified package per language** (not separate feature packages). Feature domains are **namespaces within it** (`turbo.mail`, `turbo.validation`, …), shipped incrementally by priority. Internal organization is idiomatic per language.
+4. **Versioning = independent per language.** Each package versions on its own cadence (AWS/Google/Stripe model); there is no lockstep family version, so no language's release ever waits on another's readiness. Release tags in this repo are `<lang>/vX.Y.Z` (e.g. `node/v1.2.0`); the split workflow translates each to an **unprefixed** `vX.Y.Z` on its mirror, which is what pkg.go.dev and Packagist require. See [ADR-0003](docs/adr/0003-sdk-repository-topology.md).
 
 ## Approach: Generated Core + Curated Facade (free stack)
 
@@ -62,7 +63,7 @@ The real risk with the free stack: **OpenAPI Generator's OpenAPI 3.1 support is 
 
 **Free per-language fallback** if OpenAPI Generator can't produce usable core for one language: Microsoft **Kiota** (also free/OSS, stronger for C#/Go). Contingency, not the backbone.
 
-## Repository layout (all inside `developers-hub`)
+## Repository layout (development: all inside `developers-hub`)
 
 This repo shifts from docs-only to **docs + SDK source**; language toolchains and publish CI are added, scoped to `sdks/` so the Pages pipeline is unaffected. Existing `sdks/*.md` guides stay; source is isolated under `packages/`:
 
@@ -80,9 +81,40 @@ sdks/
   scripts/                    # bundle + generate + downconvert-if-needed
 ```
 
+Publishing fans out from here to five read-only mirrors (decision #2). Nothing is ever
+committed to a mirror; each is a `git subtree split` of one package directory:
+
+```
+sdks/packages/{node,python,csharp,go,php}
+      │  .github/workflows/split-mirrors.yml — one workflow, five targets
+      ├──→ turbosmtp-node    (read-only) → npm       @turbosmtp/sdk
+      ├──→ turbosmtp-python  (read-only) → PyPI      turbosmtp
+      ├──→ turbosmtp-dotnet  (read-only) → NuGet     TurboSMTP
+      ├──→ turbosmtp-go      (read-only) → pkg.go.dev
+      └──→ turbosmtp-php     (read-only) → Packagist turbosmtp/turbosmtp-client
+```
+
+Note that the mirror **repository** name and the **package** name are independent: the PHP
+mirror is `turbosmtp-php`, but its Packagist package keeps the contracted name
+`turbosmtp/turbosmtp-client` (`client-contract.md` §6).
+
+Because the mirror is canonical for consumers, Go's `go.mod` and PHP's `composer.json`
+declare the **mirror's** identity rather than their in-repo location — `module
+github.com/turbosmtp/turbosmtp-go` and `"name": "turbosmtp/turbosmtp-client"`. Go does not
+require the main module's path to match its directory, so local builds and tests are
+unaffected.
+
+**Go module paths are case-sensitive**, so the declared path is lower-case per
+`client-contract.md` §6. GitHub URLs are case-insensitive, but Go is not: if `go.mod`
+declares `github.com/turbosmtp/…` and a user runs `go get github.com/turboSMTP/…`, the
+build fails with *"module declares its path as X but was required as Y"*. Upper-case
+letters also get `!`-escaped in proxy and module-cache paths (`turbo!s!m!t!p`). Any
+published guide showing a mixed-case `go get` must be corrected before Go ships — see
+`TASKS.md` 3.7.
+
 - **Spec source for generation:** the in-repo `api-reference/turbo-smtp.yaml` (keeps `developers-hub` self-contained in CI). It continues to sync from `turbo-smtp-openapi/` per the existing CLAUDE.md step.
 - **Regeneration:** a new `.github/workflows/generate-sdks.yml` runs bundle → generate on spec change and opens a PR with the regenerated Layer 1. Layer 2 facade is untouched by regen; only genuinely new domains/endpoints need facade additions.
-- **Publishing:** per-language CI publishes to npm / PyPI / NuGet / pkg.go.dev / Packagist on tagged release.
+- **Publishing:** per-language, triggered by a `<lang>/vX.Y.Z` tag. npm / PyPI / NuGet publish directly from this repo; `.github/workflows/split-mirrors.yml` pushes each package subtree to its read-only mirror and translates the tag to unprefixed `vX.Y.Z` — which is how pkg.go.dev and Packagist consume Go and PHP, and what gives every language a clean, discoverable public repo. Mirrors have Issues and PRs disabled; all issues land here.
 
 ## Execution phases (priority-driven, interactive)
 

@@ -1,0 +1,86 @@
+name: Split packages to publish mirrors
+
+# Publishing topology "C+" — see sdks/plan.md decision #2 and sdks/TASKS.md 4.7.
+#
+# developers-hub is the only repo anyone commits to. A release tag pushes that one
+# package's subtree to its read-only mirror, which is what npm / pkg.go.dev / Packagist
+# link to and (for Go and PHP) actually consume.
+#
+# Tag convention:  <lang>/vX.Y.Z  here  ->  vX.Y.Z  on the mirror.
+# The mirror tag MUST be unprefixed: Go resolves versions from root-module tags, and
+# Packagist reads composer.json from the repository root. That translation is the whole
+# reason this workflow exists.
+#
+# Requires a secret `MIRROR_TOKEN` — a PAT or GitHub App installation token with
+# `contents: write` on the five turbosmtp-* mirror repos.
+
+on:
+  push:
+    tags:
+      - 'node/v*'
+      - 'python/v*'
+      - 'csharp/v*'
+      - 'go/v*'
+      - 'php/v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing <lang>/vX.Y.Z tag to (re-)split'
+        required: true
+
+jobs:
+  split:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `git subtree split` replays the directory's whole history — a shallow
+          # clone silently produces a truncated mirror.
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Resolve language, version and mirror from the tag
+        id: target
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          lang="${tag%%/*}"
+          version="${tag#*/}"
+          case "$lang" in
+            node)   mirror=turbosmtp-node ;;
+            python) mirror=turbosmtp-python ;;
+            csharp) mirror=turbosmtp-dotnet ;;
+            go)     mirror=turbosmtp-go ;;
+            php)    mirror=turbosmtp-php ;;
+            *) echo "::error::Unrecognised language prefix '$lang' in tag '$tag'"; exit 1 ;;
+          esac
+          if [ "$version" = "$tag" ]; then
+            echo "::error::Tag '$tag' is not in <lang>/vX.Y.Z form"; exit 1
+          fi
+          {
+            echo "lang=$lang"
+            echo "version=$version"
+            echo "mirror=$mirror"
+            echo "prefix=sdks/packages/$lang"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Verify the package directory exists
+        run: test -d "${{ steps.target.outputs.prefix }}"
+
+      - name: Split the package subtree
+        id: split
+        run: |
+          set -euo pipefail
+          sha="$(git subtree split --prefix=${{ steps.target.outputs.prefix }})"
+          echo "Split ${{ steps.target.outputs.prefix }} -> $sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Push subtree and translated tag to the mirror
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: |
+          set -euo pipefail
+          remote="https://x-access-token:${MIRROR_TOKEN}@github.com/${{ github.repository_owner }}/${{ steps.target.outputs.mirror }}.git"
+          git push --force "$remote" "${{ steps.split.outputs.sha }}:refs/heads/main"
+          git push --force "$remote" "${{ steps.split.outputs.sha }}:refs/tags/${{ steps.target.outputs.version }}"
+          echo "Mirrored ${{ steps.target.outputs.lang }} as ${{ steps.target.outputs.mirror }}@${{ steps.target.outputs.version }}"

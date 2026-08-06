@@ -4,7 +4,7 @@
  * In your own project: import { TurboSMTPClient } from '@turbosmtp/sdk';
  * Run: node examples/js/html-email.mjs  (build first; set CONSUMER_KEY / CONSUMER_SECRET).
  */
-import { TurboSMTPClient } from '../../dist/index.js';
+import { TurboSMTPClient } from '../../dist/esm/index.mjs';
 
 const consumerKey = process.env.CONSUMER_KEY;
 const consumerSecret = process.env.CONSUMER_SECRET;

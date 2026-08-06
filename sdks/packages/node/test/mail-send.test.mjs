@@ -17,7 +17,7 @@ import {
   AuthenticationError,
   BadRequestError,
   NetworkError,
-} from '../dist/index.js';
+} from '../dist/cjs/index.js';
 
 import { makeFetch, makeThrowingFetch, lastBody, lastHeaders, lastUrl } from './helpers.mjs';
 

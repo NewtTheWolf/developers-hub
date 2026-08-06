@@ -14,3 +14,5 @@ Each ADR is a Markdown file named `NNNN-short-title.md` where `NNNN` is a zero-p
 |---|---|---|---|---|
 | [0001](0001-nodejs-dependency-injection-strategy.md) | Dependency Injection Strategy | Node.js SDK | Accepted | 2026-07-28 |
 | [0002](0002-csharp-dependency-injection-strategy.md) | Dependency Injection Strategy | C# SDK | Accepted | 2026-07-28 |
+| [0003](0003-sdk-repository-topology.md) | SDK Repository Topology — Monorepo Development, Mirrored Publishing | All SDKs | Accepted | 2026-08-05 |
+| [0004](0004-build-toolchain-version-policy.md) | Build Toolchain Version Policy | All SDKs | Accepted | 2026-08-05 |

@@ -7,7 +7,7 @@
  *
  * Run: node examples/js/minimal-send.mjs  (set CONSUMER_KEY / CONSUMER_SECRET first).
  */
-import { TurboSMTPClient } from '../../dist/index.js';
+import { TurboSMTPClient } from '../../dist/esm/index.mjs';
 
 const consumerKey = process.env.CONSUMER_KEY;
 const consumerSecret = process.env.CONSUMER_SECRET;

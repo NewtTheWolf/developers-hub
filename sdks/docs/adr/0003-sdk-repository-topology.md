@@ -160,8 +160,25 @@ repository, and would make the release process differ per language for no benefi
 - **Read-only mirrors attract contributions.** Disabling Issues and adding README banners mitigates
   this, but pull requests cannot be disabled at all, so some will arrive on the wrong repository and
   need closing by hand.
-- **The existing Packagist package `turbosmtp/turbosmtp-client` must be migrated** to point at the new
-  `turbosmtp-php` mirror when the rebuilt PHP SDK ships, rather than published fresh.
+- ~~**The existing Packagist package `turbosmtp/turbosmtp-client` must be migrated** to point at the new
+  `turbosmtp-php` mirror when the rebuilt PHP SDK ships, rather than published fresh.~~
+
+  > **Factual correction, 2026-08-11.** There is no such package. A registry check that day found
+  > the Packagist **vendor `turbosmtp` entirely unclaimed** (`list.json?vendor=turbosmtp` returns an
+  > empty set) and `turbosmtp/turbosmtp-client` unpublished. The legacy `turboSMTP-php` repository
+  > declares `turbosmtp/sdk`, not `turbosmtp-client`, and was never published to Packagist at all —
+  > consistent with its `composer.json` sitting in a subdirectory, the very layout this ADR shows
+  > public Packagist cannot index. **PHP therefore publishes fresh and claims the vendor**, rather
+  > than migrating anything. Recorded inline rather than as a superseding ADR because no decision
+  > changed — only an incorrect premise about the starting state. See
+  > [ADR-0006](0006-legacy-official-sdk-consolidation.md).
+
+- **Two mirror names are currently occupied by the legacy SDK repositories.** GitHub repository
+  names are case-insensitive-unique per owner, so `turbosmtp-python` and `turbosmtp-php` resolve
+  today to `turboSMTP/turboSMTP-python` and `turboSMTP/turboSMTP-php` and **cannot be created**
+  until those are renamed — archiving does not free a name. C# is unaffected because its mirror is
+  `turbosmtp-dotnet`; Go and Node are free. The rename-before-mirror sequence is fixed by
+  [ADR-0006](0006-legacy-official-sdk-consolidation.md) and tracked as `TASKS.md` 3.1 / 3.10 / 4.7.
 - **Go's case-sensitivity is a live trap.** Module paths are case-sensitive while GitHub URLs are
   not; a mixed-case `go get` against a lower-case `go.mod` fails with *"module declares its path as X
   but was required as Y"*. Published guides currently show the mixed-case form and must be corrected

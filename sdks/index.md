@@ -6,33 +6,72 @@ Official and community-maintained client libraries for the TurboSMTP API.
 
 ## Official SDKs
 
+> **Status, 2026-08-11.** No TurboSMTP SDK is published to a package registry yet. The table below
+> reports actual availability — earlier revisions of this page listed install commands for packages
+> that do not exist. Planned package names are fixed in
+> [`client-contract.md`](client-contract.md) §6 but are not installable until each SDK ships.
+
 | Language | Status | Install | Guide |
 |---|---|---|---|
-| C# | Stable | `dotnet add package TurboSMTP` | [csharp.md](csharp.md) |
-| PHP | Stable | `composer require turbosmtp/turbosmtp-client` | [php.md](php.md) |
-| Node.js / TypeScript | Planned | `npm install @turbosmtp/sdk` | [nodejs.md](nodejs.md) |
-| Python | Planned | `pip install turbosmtp` | [python.md](python.md) |
-| Go | Planned | `go get github.com/turboSMTP/turbosmtp-go` | [go.md](go.md) |
+| Node.js / TypeScript | Built, publish pending | *not yet published* — planned as `@turbosmtp/sdk` | [nodejs.md](nodejs.md) |
+| Python | Planned | *not yet published* | [python.md](python.md) |
+| C# | Planned | *not yet published* — planned as `TurboSMTP` (NuGet) | [csharp.md](csharp.md) |
+| Go | Planned | *not yet published* — planned as `github.com/turbosmtp/turbosmtp-go` | [go.md](go.md) |
+| PHP | Planned | *not yet published* — planned as `turbosmtp/turbosmtp-client` | [php.md](php.md) |
+
+The Go module path is **lower-case**. Go module paths are case-sensitive while GitHub URLs are not,
+so `go get github.com/turboSMTP/…` against a lower-case `go.mod` fails with *"module declares its
+path as X but was required as Y"*.
+
+### Superseded SDKs
+
+Three repositories previously carried the official label. None was ever published to a package
+registry, and all three are superseded by the SDKs described above — see
+[ADR-0006](docs/adr/0006-legacy-official-sdk-consolidation.md). They are deprecated per language as
+each replacement ships, so they remain readable until then.
+
+| Repository | Language | Note |
+|---|---|---|
+| [turboSMTP-csharp](https://github.com/turboSMTP/turboSMTP-csharp) | C# | Most complete of the three; source-only, never on NuGet |
+| [turboSMTP-php](https://github.com/turboSMTP/turboSMTP-php) | PHP | Source-only, never on Packagist |
+| [turboSMTP-python](https://github.com/turboSMTP/turboSMTP-python) | Python | Generator output only, no client layer |
 
 ---
 
 ## SDK Design Philosophy
 
-All official TurboSMTP SDKs expose a **unified client surface** — one package covers transactional email, email validation, and analytics. There is no need to install separate libraries per feature.
+All official TurboSMTP SDKs expose a **unified client surface** — one package per language, with
+each feature area as a namespace (`mail`, `validation`, …). There is no need to install separate
+libraries per feature. The surface every SDK must satisfy is fixed in
+[`client-contract.md`](client-contract.md).
 
-New SDKs (Node.js, Python, Go) target minimal instantiation:
+Minimal instantiation, as shipped in the Node.js SDK:
 
 ```typescript
-// Node.js example
-import { TurboClient } from '@turbosmtp/sdk';
+import { TurboSMTPClient } from '@turbosmtp/sdk';
 
-const turbo = new TurboClient(process.env.TURBO_API_KEY);
+const client = new TurboSMTPClient({
+  consumerKey: process.env.CONSUMER_KEY!,
+  consumerSecret: process.env.CONSUMER_SECRET!,
+});
 
-await turbo.mail.send({ from: '...', to: ['...'], subject: '...', html: '...' });
-const result = await turbo.validation.verify('user@example.com');
+const { messageId } = await client.mail.send({
+  from: 'you@yourdomain.com',
+  to: ['recipient@example.com'],
+  subject: 'Hello from TurboSMTP',
+  text: 'Sent with the TurboSMTP Node.js SDK.',
+});
 ```
 
-All SDKs are generated from the [OpenAPI 3.1 specification](../api-reference/README.md) using `openapi-generator-cli v7.18.0` with custom fluent interface templates.
+Authentication is a `consumerKey`/`consumerSecret` pair, not a single API key, and the SDK attaches
+both headers for you. Namespaces ship in priority order — `mail` first, `validation` next — so
+`client.validation` is not yet available in any SDK.
+
+SDKs are built in three layers: a transport client generated from the
+[OpenAPI 3.1 specification](../api-reference/README.md) by `openapi-generator-cli` (pinned in
+[`openapitools.json`](openapitools.json)), a **hand-written facade** that provides the contracted
+surface, and the conformance tests. No custom generator templates are used — ergonomics live in the
+facade, not in the generated layer. See [`plan.md`](plan.md).
 
 ---
 

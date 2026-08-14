@@ -18,3 +18,5 @@ Each ADR is a Markdown file named `NNNN-short-title.md` where `NNNN` is a zero-p
 | [0004](0004-build-toolchain-version-policy.md) | Build Toolchain Version Policy | All SDKs | Accepted | 2026-08-05 |
 | [0005](0005-sdk-program-authority.md) | SDK Program Authority — `developers-hub/sdks/` Is the Decision Record | SDK program | Accepted | 2026-08-11 |
 | [0006](0006-legacy-official-sdk-consolidation.md) | Legacy Official SDK Consolidation — Deprecate `turboSMTP-{csharp,php,python}` | C# / PHP / Python | Accepted | 2026-08-11 |
+| [0007](0007-sdk-packaging-granularity.md) | SDK Packaging Granularity — One Unified Package Per Language | All SDKs | Accepted | 2026-08-14 |
+| [0008](0008-python-transport-injection-strategy.md) | Transport Injection Strategy | Python SDK | Accepted | 2026-08-14 |

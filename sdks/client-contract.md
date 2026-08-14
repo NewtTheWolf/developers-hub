@@ -36,6 +36,14 @@ Each SDK is three thin layers (full rationale in `plan.md`):
 - **Layer 1 — Generated core.** Transport, (de)serialization, auth headers, models, multipart —
   produced by OpenAPI Generator, regenerated on spec change, committed per language. **Not governed
   by this contract.**
+  > **Hiding Layer 1 is asymmetric, and the asymmetry is accepted** (finding E4, ratified in
+  > [ADR-0007](docs/adr/0007-sdk-packaging-granularity.md)). It is *enforceable* only in **Node**
+  > (`exports` encapsulation makes unlisted subpaths throw `ERR_PACKAGE_PATH_NOT_EXPORTED`) and
+  > **Go** (`internal/`, which the compiler enforces). **Python** (`turbosmtp._generated`) and
+  > **PHP** (`@internal`) are convention-only, and **C# cannot hide it at all** — the generator
+  > emits `public` types in `TurboSMTP.Generated`. So in three of five languages a consumer *can*
+  > reach Layer 1 and may bind to it. This is documented rather than fought with custom templates;
+  > what the contract guarantees is the Layer 2 surface, not the unreachability of Layer 1.
 - **Layer 2 — Curated facade.** The unified `TurboSMTPClient` and its domain namespaces. This is
   where the surface diverges from endpoints 1:1 (arrays instead of CSV, hidden auth, composed
   helpers). **This contract governs Layer 2.**
@@ -290,6 +298,15 @@ Planned surface (to be detailed in 5.1):
 
 Folds in **task 0.3**. Namespaces are confirmed as: **`mail`, `validation`, `analytics`,
 `suppressions`, `subaccounts`, `account`**.
+
+> **Namespaces are a *surface* guarantee, independent of distribution granularity**
+> ([ADR-0007](docs/adr/0007-sdk-packaging-granularity.md)). This table fixes what a developer reaches
+> (`client.mail`, `client.validation`, …) and says nothing about how many packages the surface arrives
+> in. Today ADR-0007 fixes that at **one unified package per language** — so the §3.1 `Package` row is
+> one registry name each — and if a flip trigger ever splits a language, this table is unaffected: the
+> namespaces are the same, only the install line changes. Consequently a package-name change (e.g. the
+> unresolved PyPI `turbosmtp` conflict, `TASKS.md` 3.3b) amends §3.1's `Package` row alone and touches
+> nothing here, because a *distribution* name is not an *import* name.
 
 | Tier | Namespace(s) | Domain | Auth path | Status |
 |---|---|---|---|---|

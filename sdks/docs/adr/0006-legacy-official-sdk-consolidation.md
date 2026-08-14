@@ -174,7 +174,7 @@ the minimum needed to free a name; deletion is never required.
 - [ADR-0005](0005-sdk-program-authority.md) — SDK program authority; makes this consolidation actionable
 - [ADR-0003](0003-sdk-repository-topology.md) — mirror repositories and published names; the name collision applies to its Python and PHP rows
 - `sdks/client-contract.md` §6 — canonical package names per registry
-- `sdks/TASKS.md` — 3.1/3.10 rename prerequisite, 3.3 PyPI name, 4.7 mirror prerequisites, deprecation execution tasks
+- `sdks/TASKS.md` — 3.1/3.10 rename prerequisite, 9.1 the rename itself, 3.3b PyPI name, 4.7 mirror prerequisites, deprecation execution tasks
 - `CLAUDE.md` — canonical spec flow (`turbo-smtp-openapi` → `api-reference/` → `sdks/build/`)
 - `turboSMTP/turboSMTP-csharp`, `turboSMTP/turboSMTP-php`, `turboSMTP/turboSMTP-python` — the superseded repositories
 - [PEP 541 — Package Index Name Retention](https://peps.python.org/pep-0541/) (the mechanism for claiming an abandoned PyPI name)

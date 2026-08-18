@@ -139,19 +139,36 @@ const euClient = new TurboSMTPClient({
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `from` | `string` | **Yes** | Sender address (must be authorized for your account). |
-| `to` | `string[]` | **Yes** | Recipient addresses. |
-| `cc` | `string[]` | No | CC recipients. |
-| `bcc` | `string[]` | No | BCC recipients. |
+| `from` | `Address` | **Yes** | Sender address (must be authorized for your account). |
+| `to` | `AddressInput` | **Yes** | Recipient addresses. |
+| `cc` | `AddressInput` | No | CC recipients. |
+| `bcc` | `AddressInput` | No | BCC recipients. |
 | `subject` | `string` | No | Subject line. |
 | `text` | `string` | No | Plain-text body. |
 | `html` | `string` | No | HTML body. |
-| `replyTo` | `string` | No | Reply-To address (sent as a custom `reply-to` header). |
+| `replyTo` | `AddressInput` | No | Reply-To address (sent as a custom `reply-to` header). |
 | `headers` | `Record<string, string>` | No | Additional custom headers. An explicit `replyTo` wins over a `reply-to` key here. |
 | `attachments` | `Attachment[]` | No | File attachments (see below). |
 | `referenceId` | `string` | No | Your identifier, echoed back in the Event Webhook. |
 | `campaignId` | `string` | No | Campaign identifier. |
 | `mimeRaw` | `string` | No | Raw MIME that replaces `text` + `html`. |
+
+### Addresses
+
+Every address field takes a plain string, an `{ address, name }` object, or an array of either:
+
+```typescript
+await client.mail.send({
+  from: { address: 'billing@yourdomain.com', name: 'Acme Billing' },
+  to: ['first@example.com', { address: 'second@example.com', name: 'Doe, Jane' }],
+  subject: 'Invoice #1042',
+  text: 'Attached.',
+});
+```
+
+A plain string is sent exactly as you wrote it, so `'Acme <billing@yourdomain.com>'` works too. A
+display name is quoted for you when it needs to be — the `Doe, Jane` above would otherwise split
+into two bogus recipients at the comma.
 
 ### HTML body
 
@@ -185,6 +202,10 @@ await client.mail.send({
 `Attachment.content` is **raw bytes** (`Uint8Array` or `ArrayBuffer`) — the SDK base64-encodes it for
 you. Set `contentId` to embed an image in HTML via `cid:`.
 
+Write the reference as the plain `cid:<id>` you would expect. TurboSMTP keys inline parts by
+`<content_id@sender-domain>`, so the SDK appends your sender's domain to the reference before
+sending; a bare reference would arrive as an ordinary attachment instead of rendering inline.
+
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `content` | `Uint8Array \| ArrayBuffer` | **Yes** | Raw file bytes. |
@@ -209,6 +230,27 @@ await client.mail.send({
   ],
 });
 ```
+
+---
+
+## Running the tests
+
+```bash
+npm test          # offline; mocked transport, no credentials needed
+npm run test:live # sends real email, requires credentials
+```
+
+The live suite is skipped unless all four variables are set:
+
+```bash
+TURBOSMTP_CONSUMER_KEY=... TURBOSMTP_CONSUMER_SECRET=... \
+TURBOSMTP_TEST_FROM=noreply@yourdomain.com \
+TURBOSMTP_TEST_TO=you@yourdomain.com \
+npm run test:live
+```
+
+It exists because a mocked suite can only prove what the SDK *serializes*, never what the API
+*accepts* — the recipient-comma rule was found exactly that way.
 
 ---
 

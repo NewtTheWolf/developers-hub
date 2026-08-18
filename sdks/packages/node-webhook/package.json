@@ -1,0 +1,64 @@
+{
+  "name": "@turbosmtp/webhook",
+  "version": "0.1.0",
+  "description": "Parse and authenticate TurboSMTP event webhooks.",
+  "license": "MIT",
+  "author": "TurboSMTP <api@turbo-smtp.com>",
+  "homepage": "https://serversmtp.com/email-sdks-for-developers",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/turboSMTP/developers-hub.git",
+    "directory": "sdks/packages/node-webhook"
+  },
+  "bugs": {
+    "url": "https://github.com/turboSMTP/developers-hub/issues"
+  },
+  "keywords": [
+    "turbosmtp",
+    "email",
+    "webhook",
+    "events",
+    "transactional-email"
+  ],
+  "type": "commonjs",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.mjs",
+  "types": "./dist/cjs/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/cjs/index.d.ts",
+      "import": "./dist/esm/index.mjs",
+      "require": "./dist/cjs/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.mjs",
+    "dist/**/*.d.ts",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build:cjs": "tsc",
+    "build:esm": "esbuild src/index.ts --bundle --packages=external --format=esm --target=es2020 --platform=node --outfile=dist/esm/index.mjs",
+    "build": "npm run clean && npm run build:cjs && npm run build:esm",
+    "prepare": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "pretest": "npm run build",
+    "test": "node --test test/*.test.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "esbuild": "^0.28.1",
+    "typescript": "~7.0.2"
+  }
+}

@@ -33,8 +33,7 @@
   },
   "files": [
     "dist",
-    "src/*.ts",
-    "src/generated/src"
+    "LICENSE"
   ],
   "sideEffects": false,
   "engines": {
@@ -46,12 +45,14 @@
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "build:cjs": "tsc",
-    "build:esm": "esbuild src/index.ts --bundle --packages=external --format=esm --target=es2020 --platform=neutral --outfile=dist/esm/index.mjs --sourcemap",
+    "build:esm": "esbuild src/index.ts --bundle --packages=external --format=esm --target=es2020 --platform=neutral --outfile=dist/esm/index.mjs",
     "build": "npm run clean && npm run build:cjs && npm run build:esm",
+    "prepare": "npm run build",
     "typecheck": "tsc --noEmit",
     "typecheck:examples": "tsc --noEmit -p examples/tsconfig.json",
     "pretest": "npm run build",
     "test": "node --test test/*.test.mjs",
+    "test:live": "npm run build && node --test test/live/*.test.mjs",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {

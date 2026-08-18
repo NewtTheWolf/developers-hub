@@ -6,13 +6,23 @@
  * the developer), and a stringified `messageId`. It maps onto the generated
  * Layer 1 `MailMessage` wire model (§4.2) and hides the dual-auth entirely.
  */
+
 import {
-  MailApi,
-  type MailMessage,
-  type Attachment as WireAttachment,
-  type SendSucessResponsetBody,
-} from './generated/src';
+  type Address,
+  type AddressInput,
+  formatAddress,
+  joinAddresses,
+  joinRecipients,
+  senderDomain,
+} from './address';
 import { toTurboSMTPError } from './errors';
+import type {
+  MailApi,
+  MailMessage,
+  SendSucessResponsetBody,
+  Attachment as WireAttachment,
+} from './generated/src';
+import { qualifyInlineCids } from './inline-cid';
 
 /** A file attached to an email. `content` is raw bytes — the SDK base64-encodes it. */
 export interface Attachment {
@@ -25,17 +35,17 @@ export interface Attachment {
 
 /** The message to send. `from` and `to` are required; everything else is optional. */
 export interface SendMessage {
-  from: string;
-  to: string[];
-  cc?: string[];
-  bcc?: string[];
+  from: Address;
+  to: AddressInput;
+  cc?: AddressInput;
+  bcc?: AddressInput;
   subject?: string;
   /** Plain-text body. */
   text?: string;
   /** HTML body. */
   html?: string;
   /** First-class Reply-To; injected as the `reply-to` custom header. */
-  replyTo?: string;
+  replyTo?: AddressInput;
   /** Additional custom headers. An explicit `replyTo` wins over a `reply-to` key here. */
   headers?: Record<string, string>;
   attachments?: Attachment[];
@@ -73,15 +83,17 @@ function bytesToBase64(input: Uint8Array | ArrayBuffer): string {
   return out;
 }
 
-/** Array of addresses → comma-joined CSV string (undefined stays undefined). */
-function joinAddrs(addrs?: string[]): string | undefined {
-  return addrs == null ? undefined : addrs.join(',');
-}
-
 /** Merge custom headers with an explicit `replyTo` (replyTo wins). */
 function buildCustomHeaders(msg: SendMessage): { [key: string]: string } | undefined {
   const headers: { [key: string]: string } = { ...(msg.headers ?? {}) };
-  if (msg.replyTo != null) headers['reply-to'] = msg.replyTo;
+  if (msg.replyTo != null) {
+    // Header names are case-insensitive, so any existing spelling has to go first;
+    // otherwise both survive and the message goes out with two Reply-To headers.
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === 'reply-to') delete headers[key];
+    }
+    headers['reply-to'] = joinAddresses(msg.replyTo);
+  }
   return Object.keys(headers).length > 0 ? headers : undefined;
 }
 
@@ -94,17 +106,31 @@ function toWireAttachment(a: Attachment): WireAttachment {
   };
 }
 
+/**
+ * The HTML body with every inline `cid:` reference qualified by the sender domain (§4.5).
+ * Returns the body untouched when there is nothing to qualify.
+ */
+function toHtmlContent(msg: SendMessage): string | undefined {
+  if (msg.html == null || !msg.attachments?.length) {
+    return msg.html;
+  }
+  const ids = msg.attachments
+    .map((attachment) => attachment.contentId)
+    .filter((id): id is string => id != null);
+  const domain = ids.length === 0 ? undefined : senderDomain(msg.from);
+  return domain == null ? msg.html : qualifyInlineCids(msg.html, ids, domain);
+}
+
 /** Map the facade message onto the generated `MailMessage` (§4.2). */
 export function toMailMessage(msg: SendMessage): MailMessage {
   return {
-    from: msg.from,
-    // `to` is required on the wire; if a caller omits it the server returns 400.
-    to: joinAddrs(msg.to) as string,
-    cc: joinAddrs(msg.cc),
-    bcc: joinAddrs(msg.bcc),
+    from: formatAddress(msg.from),
+    to: joinRecipients(msg.to, 'to'),
+    cc: msg.cc == null ? undefined : joinRecipients(msg.cc, 'cc'),
+    bcc: msg.bcc == null ? undefined : joinRecipients(msg.bcc, 'bcc'),
     subject: msg.subject,
     content: msg.text,
-    htmlContent: msg.html,
+    htmlContent: toHtmlContent(msg),
     customHeaders: buildCustomHeaders(msg),
     referenceId: msg.referenceId,
     xCampaignID: msg.campaignId,

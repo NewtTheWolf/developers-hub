@@ -6,9 +6,10 @@
  * every request. `Authorization` is never sent (POST /mail/send rejects it). The
  * `region` option selects the send host; no other host varies in P0.
  */
+
+import { TurboSMTPError } from './errors';
 import { Configuration, MailApi } from './generated/src';
 import { MailNamespace } from './mail';
-import { TurboSMTPError } from './errors';
 
 /** Sending region — selects the `/mail/send` host. */
 export type Region = 'global' | 'eu';
@@ -41,11 +42,19 @@ export class TurboSMTPClient {
   readonly mail: MailNamespace;
 
   constructor(options: TurboSMTPClientOptions) {
-    if (!options || !options.consumerKey || !options.consumerSecret) {
+    if (!options?.consumerKey || !options.consumerSecret) {
       throw new TurboSMTPError('TurboSMTPClient requires both `consumerKey` and `consumerSecret`.');
     }
 
     const region: Region = options.region ?? 'global';
+    // A JS caller gets no type checking, and an unknown region would leave basePath
+    // undefined — the generated layer then falls back to a host that does not serve
+    // /mail/send, so every send would fail opaquely instead of here.
+    if (!(region in SEND_HOSTS)) {
+      throw new TurboSMTPError(
+        `Unknown region "${region}". Expected one of: ${Object.keys(SEND_HOSTS).join(', ')}.`,
+      );
+    }
 
     // Consumer credentials go on `headers` (sent on every request); `apiKey` is
     // deliberately left unset so Layer 1 never emits an `Authorization` header.

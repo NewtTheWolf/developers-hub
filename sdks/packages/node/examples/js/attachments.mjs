@@ -2,7 +2,9 @@
  * Attachments (§3.3.5) — a file attachment plus an embedded image.
  *
  * `Attachment.content` is raw bytes (Uint8Array | ArrayBuffer); the SDK
- * base64-encodes it. Set `contentId` to reference an image from HTML via `cid:`.
+ * base64-encodes it. Set `contentId` and reference it from HTML as `cid:<id>`;
+ * the SDK appends the sender domain, which is what TurboSMTP matches inline
+ * parts on — a bare reference would arrive as a plain attachment instead.
  * This example builds bytes in-memory so it has no file dependency — in a real
  * app you'd read them from disk, e.g.
  *     import { readFile } from 'node:fs/promises';

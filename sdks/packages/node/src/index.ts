@@ -4,21 +4,21 @@
  * Layer 2 (curated facade). The generated Layer 1 lives under `./generated` and
  * is intentionally NOT re-exported here — only the contracted surface is public.
  */
+
+export type { Address, AddressInput, AddressObject } from './address';
+export type { Region, TurboSMTPClientOptions } from './client';
 export { TurboSMTPClient } from './client';
-export type { TurboSMTPClientOptions, Region } from './client';
-
-export { MailNamespace } from './mail';
-export type { SendMessage, Attachment, SendResult } from './mail';
-
+export type { TurboSMTPErrorInit } from './errors';
 export {
-  TurboSMTPError,
+  ApiError,
   AuthenticationError,
   BadRequestError,
-  ValidationError,
   ForbiddenError,
+  NetworkError,
   NotFoundError,
   RateLimitError,
-  ApiError,
-  NetworkError,
+  TurboSMTPError,
+  ValidationError,
 } from './errors';
-export type { TurboSMTPErrorInit } from './errors';
+export type { Attachment, SendMessage, SendResult } from './mail';
+export { MailNamespace } from './mail';

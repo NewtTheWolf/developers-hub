@@ -5,7 +5,7 @@
  * (transport failure). Layer 2 catches those and normalizes them into this
  * single hierarchy so every SDK surfaces the same, idiomatic error taxonomy.
  */
-import { ResponseError, FetchError } from './generated/src';
+import { FetchError, ResponseError } from './generated/src';
 
 export interface TurboSMTPErrorInit {
   /** HTTP status code, or null when there was no HTTP response (network failure). */
@@ -119,7 +119,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 function extractMessage(raw: unknown): string | undefined {
   if (typeof raw === 'string' && raw.length > 0) return raw;
-  if (isRecord(raw) && typeof raw['message'] === 'string') return raw['message'];
+  if (isRecord(raw) && typeof raw.message === 'string') return raw.message;
   return undefined;
 }
 
@@ -160,13 +160,13 @@ export async function toTurboSMTPError(err: unknown): Promise<TurboSMTPError> {
       case 401:
         return new AuthenticationError(message, {
           ...base,
-          errorCode: isRecord(raw) && typeof raw['errorCode'] === 'number' ? raw['errorCode'] : undefined,
-          details: isRecord(raw) && typeof raw['details'] === 'string' ? raw['details'] : undefined,
+          errorCode: isRecord(raw) && typeof raw.errorCode === 'number' ? raw.errorCode : undefined,
+          details: isRecord(raw) && typeof raw.details === 'string' ? raw.details : undefined,
         });
       case 400:
         return new BadRequestError(message, {
           ...base,
-          errors: isRecord(raw) && Array.isArray(raw['errors']) ? (raw['errors'] as string[]) : undefined,
+          errors: isRecord(raw) && Array.isArray(raw.errors) ? (raw.errors as string[]) : undefined,
         });
       case 403:
         return new ForbiddenError(message, base);

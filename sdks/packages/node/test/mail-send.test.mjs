@@ -8,18 +8,19 @@
  * Run: `npm test` (builds first, then `node --test`). Imports the built facade
  * from ../dist so the tests exercise the real published entry point.
  */
-import { test } from 'node:test';
+
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 
 import {
-  TurboSMTPClient,
-  TurboSMTPError,
   AuthenticationError,
   BadRequestError,
   NetworkError,
+  TurboSMTPClient,
+  TurboSMTPError,
 } from '../dist/cjs/index.js';
 
-import { makeFetch, makeThrowingFetch, lastBody, lastHeaders, lastUrl } from './helpers.mjs';
+import { lastBody, lastHeaders, lastUrl, makeFetch, makeThrowingFetch } from './helpers.mjs';
 
 const creds = { consumerKey: 'ck', consumerSecret: 'cs' };
 const clientWith = (fetchApi, extra = {}) => new TurboSMTPClient({ ...creds, fetchApi, ...extra });
@@ -144,7 +145,9 @@ test('§3.3.5b attachment without contentId omits content_id', async () => {
     from: 'a@x.com',
     to: ['b@y.com'],
     text: 'x',
-    attachments: [{ content: new Uint8Array([1, 2, 3]), filename: 'a.bin', contentType: 'application/octet-stream' }],
+    attachments: [
+      { content: new Uint8Array([1, 2, 3]), filename: 'a.bin', contentType: 'application/octet-stream' },
+    ],
   });
 
   const att = lastBody(fetchApi).attachments[0];
@@ -158,7 +161,11 @@ test('§3.3.6 region:"eu" targets the EU host; global targets the global host', 
   assert.equal(lastUrl(euFetch), 'https://api.eu.turbo-smtp.com/api/v2/mail/send');
 
   const globalFetch = makeFetch(200, { message: 'OK', mid: 1 });
-  await clientWith(globalFetch, { region: 'global' }).mail.send({ from: 'a@x.com', to: ['b@y.com'], text: 'x' });
+  await clientWith(globalFetch, { region: 'global' }).mail.send({
+    from: 'a@x.com',
+    to: ['b@y.com'],
+    text: 'x',
+  });
   assert.equal(lastUrl(globalFetch), 'https://api.turbo-smtp.com/api/v2/mail/send');
 });
 
@@ -215,4 +222,12 @@ test('transport failure maps to NetworkError (status null)', async () => {
       return true;
     },
   );
+});
+
+test('an unknown region is rejected at construction', () => {
+  assert.throws(() => new TurboSMTPClient({ ...creds, region: 'EU' }), TurboSMTPError);
+  assert.throws(() => new TurboSMTPClient({ ...creds, region: 'us' }), TurboSMTPError);
+  assert.doesNotThrow(() => new TurboSMTPClient({ ...creds, region: 'eu' }));
+  assert.doesNotThrow(() => new TurboSMTPClient({ ...creds, region: 'global' }));
+  assert.doesNotThrow(() => new TurboSMTPClient(creds));
 });

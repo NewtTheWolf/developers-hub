@@ -1,0 +1,102 @@
+# Lint, typecheck, build and test the SDK packages.
+#
+# The rest of the repository is documentation and a generated spec bundle, covered
+# by validate-openapi.yml, so this workflow is scoped to paths under sdks/.
+name: SDKs CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      live:
+        description: 'Also run the live smoke tests (sends real email)'
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - 'sdks/**'
+      - 'biome.json'
+      - '.github/workflows/sdks-ci.yml'
+  pull_request:
+    paths:
+      - 'sdks/**'
+      - 'biome.json'
+      - '.github/workflows/sdks-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx --yes @biomejs/biome@2 ci sdks
+
+  test:
+    name: Test ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [node, node-webhook]
+    defaults:
+      run:
+        working-directory: sdks/packages/${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdks/packages/${{ matrix.package }}/package-lock.json
+      # `prepare` would build on install and `pretest` builds again; skipping
+      # install scripts keeps it to one build.
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm test
+
+  examples:
+    name: Typecheck examples
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdks/packages/node
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdks/packages/node/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck:examples
+
+  # Sends real email, so it never runs automatically. GitHub does not expose secrets
+  # to pull_request runs from a fork, so this could not work there in any case.
+  live:
+    name: Live smoke tests
+    if: github.event_name == 'workflow_dispatch' && inputs.live
+    runs-on: ubuntu-latest
+    environment: live-smoke
+    defaults:
+      run:
+        working-directory: sdks/packages/node
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdks/packages/node/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run test:live
+        env:
+          TURBOSMTP_CONSUMER_KEY: ${{ secrets.TURBOSMTP_CONSUMER_KEY }}
+          TURBOSMTP_CONSUMER_SECRET: ${{ secrets.TURBOSMTP_CONSUMER_SECRET }}
+          TURBOSMTP_TEST_FROM: ${{ vars.TURBOSMTP_TEST_FROM }}
+          TURBOSMTP_TEST_TO: ${{ vars.TURBOSMTP_TEST_TO }}

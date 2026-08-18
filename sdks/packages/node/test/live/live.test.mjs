@@ -18,7 +18,8 @@
 
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { describe, test } from 'node:test';
+import { beforeEach, describe, test } from 'node:test';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 const require = createRequire(import.meta.url);
 const {
@@ -40,6 +41,13 @@ suite('live smoke tests', () => {
   const client = new TurboSMTPClient({ consumerKey: KEY, consumerSecret: SECRET });
   const stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
   const subject = (name) => `[live] ${name} — ${stamp}`;
+
+  // The API is rate limited, and the spec models neither 429 nor rate-limit headers
+  // (contract §7, discrepancy 7), so the suite paces itself instead of firing every
+  // send back to back. node:test already runs these sequentially; the gap makes the
+  // throttling deliberate rather than incidental.
+  const PACE_MS = Number(process.env.TURBOSMTP_LIVE_PACE_MS ?? 1000);
+  beforeEach(() => sleep(PACE_MS));
 
   /** A message id is only useful if it survived as exact digits. */
   const assertExactId = (messageId) => {

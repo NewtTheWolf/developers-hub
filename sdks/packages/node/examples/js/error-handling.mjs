@@ -9,10 +9,10 @@
  * Run: node examples/js/error-handling.mjs  (build first; set creds).
  */
 import {
-  TurboSMTPClient,
   AuthenticationError,
   BadRequestError,
   NetworkError,
+  TurboSMTPClient,
   TurboSMTPError,
 } from '../../dist/esm/index.mjs';
 

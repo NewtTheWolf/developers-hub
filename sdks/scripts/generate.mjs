@@ -28,9 +28,9 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve, join } from 'node:path';
 
 const SDK_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = resolve(SDK_ROOT, '..');
@@ -52,11 +52,11 @@ const DOMAIN_TAGS = {
 
 // Language → generator config + canonical Layer 1 output dir (relative to SDK_ROOT).
 const LANGS = {
-  node:   { config: 'config/node.yaml',   out: 'packages/node/src/generated' },
+  node: { config: 'config/node.yaml', out: 'packages/node/src/generated' },
   python: { config: 'config/python.yaml', out: 'packages/python' },
   csharp: { config: 'config/csharp.yaml', out: 'packages/csharp' },
-  go:     { config: 'config/go.yaml',     out: 'packages/go/generated' },
-  php:    { config: 'config/php.yaml',    out: 'packages/php' },
+  go: { config: 'config/go.yaml', out: 'packages/go/generated' },
+  php: { config: 'config/php.yaml', out: 'packages/php' },
 };
 
 function parseArgs(argv) {
@@ -86,10 +86,12 @@ function main() {
   const args = parseArgs(process.argv);
   const domain = args.domain || 'mail';
   const tags = args.tags ? String(args.tags).split(',') : DOMAIN_TAGS[domain];
-  if (!tags) fail(`Unknown domain "${domain}". Known: ${Object.keys(DOMAIN_TAGS).join(', ')} (or pass --tags).`);
+  if (!tags)
+    fail(`Unknown domain "${domain}". Known: ${Object.keys(DOMAIN_TAGS).join(', ')} (or pass --tags).`);
 
   const langs = args.lang ? String(args.lang).split(',') : Object.keys(LANGS);
-  for (const l of langs) if (!LANGS[l]) fail(`Unknown language "${l}". Known: ${Object.keys(LANGS).join(', ')}.`);
+  for (const l of langs)
+    if (!LANGS[l]) fail(`Unknown language "${l}". Known: ${Object.keys(LANGS).join(', ')}.`);
 
   mkdirSync(BUILD_DIR, { recursive: true });
 
@@ -112,7 +114,9 @@ function main() {
 
   // 3. Generate each language from the filtered, domain-scoped spec.
   for (const l of langs) {
-    const outDir = args['out-root'] ? join(resolve(String(args['out-root'])), l) : join(SDK_ROOT, LANGS[l].out);
+    const outDir = args['out-root']
+      ? join(resolve(String(args['out-root'])), l)
+      : join(SDK_ROOT, LANGS[l].out);
     run(
       `generate ${l} (${domain})`,
       `npx --yes @openapitools/openapi-generator-cli generate ` +

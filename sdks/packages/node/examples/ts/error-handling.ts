@@ -9,10 +9,10 @@
  * Run: see examples/README.md (set CONSUMER_KEY / CONSUMER_SECRET first).
  */
 import {
-  TurboSMTPClient,
   AuthenticationError,
   BadRequestError,
   NetworkError,
+  TurboSMTPClient,
   TurboSMTPError,
 } from '../../src/index';
 

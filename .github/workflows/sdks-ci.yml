@@ -35,7 +35,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npx --yes @biomejs/biome@2 ci sdks
+      # Pinned exactly, not floated: this is a merge gate, and a Biome minor adding a
+      # rule to `recommended` would redden pull requests that never touched the files
+      # it fails on (ADR-0004 rules 1-3). Keep in step with biome.json's $schema.
+      - run: npx --yes @biomejs/biome@2.5.4 ci sdks
 
   test:
     name: Test ${{ matrix.package }}

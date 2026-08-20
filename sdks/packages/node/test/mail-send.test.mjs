@@ -231,3 +231,21 @@ test('an unknown region is rejected at construction', () => {
   assert.doesNotThrow(() => new TurboSMTPClient({ ...creds, region: 'global' }));
   assert.doesNotThrow(() => new TurboSMTPClient(creds));
 });
+
+// Both fields are typed as required, but the package ships to JavaScript callers
+// too, and the mapping runs before send's try block — so an omitted field used to
+// surface as a TypeError naming an internal property, outside §3.4's hierarchy.
+test('an omitted from or to throws a typed error naming the field', async () => {
+  const client = clientWith(makeFetch(200, { mid: '1' }));
+
+  for (const [field, message] of [
+    ['from', { to: ['b@y.com'], text: 'x' }],
+    ['to', { from: 'a@x.com', text: 'x' }],
+  ]) {
+    await assert.rejects(
+      () => client.mail.send(message),
+      (err) => err instanceof TurboSMTPError && err.message.includes(field),
+      `an omitted ${field} must throw a typed error naming it`,
+    );
+  }
+});

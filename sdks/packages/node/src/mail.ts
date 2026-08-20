@@ -15,7 +15,7 @@ import {
   joinRecipients,
   senderDomain,
 } from './address';
-import { toTurboSMTPError } from './errors';
+import { TurboSMTPError, toTurboSMTPError } from './errors';
 import type {
   MailApi,
   MailMessage,
@@ -121,11 +121,27 @@ function toHtmlContent(msg: SendMessage): string | undefined {
   return domain == null ? msg.html : qualifyInlineCids(msg.html, ids, domain);
 }
 
+/**
+ * Guard a required field.
+ *
+ * The types mark `from` and `to` required, but the package ships CJS/ESM to
+ * JavaScript callers who get no such check. Without this they fault inside
+ * `formatAddress` with a `TypeError` naming an internal property, outside the
+ * typed hierarchy §3.4 promises. An empty `to` array is left alone: the server
+ * rejects it with a 400 (§3.3 scenario 8).
+ */
+function required<T>(value: T | null | undefined, field: string): T {
+  if (value == null) {
+    throw new TurboSMTPError(`\`${field}\` is required.`);
+  }
+  return value;
+}
+
 /** Map the facade message onto the generated `MailMessage` (§4.2). */
 export function toMailMessage(msg: SendMessage): MailMessage {
   return {
-    from: formatAddress(msg.from),
-    to: joinRecipients(msg.to, 'to'),
+    from: formatAddress(required(msg.from, 'from')),
+    to: joinRecipients(required(msg.to, 'to'), 'to'),
     cc: msg.cc == null ? undefined : joinRecipients(msg.cc, 'cc'),
     bcc: msg.bcc == null ? undefined : joinRecipients(msg.bcc, 'bcc'),
     subject: msg.subject,

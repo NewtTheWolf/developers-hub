@@ -34,8 +34,24 @@ const SECRET = process.env.TURBOSMTP_CONSUMER_SECRET;
 const FROM = process.env.TURBOSMTP_TEST_FROM;
 const TO = process.env.TURBOSMTP_TEST_TO;
 
-const configured = Boolean(KEY && SECRET && FROM && TO);
-const suite = configured ? describe : describe.skip;
+const missing = Object.entries({
+  TURBOSMTP_CONSUMER_KEY: KEY,
+  TURBOSMTP_CONSUMER_SECRET: SECRET,
+  TURBOSMTP_TEST_FROM: FROM,
+  TURBOSMTP_TEST_TO: TO,
+})
+  .filter(([, value]) => !value)
+  .map(([name]) => name);
+
+// `describe.skip` exits 0, so in CI an unset or misnamed secret would turn the live
+// job into a green tick that sent nothing — and that job is dispatched by hand to
+// verify a release candidate against the real API, which is the one claim the mocked
+// suite cannot make. Locally, skipping stays the right behaviour.
+if (process.env.CI && missing.length > 0) {
+  throw new Error(`Live tests cannot run: ${missing.join(', ')} not set in the environment.`);
+}
+
+const suite = missing.length === 0 ? describe : describe.skip;
 
 suite('live smoke tests', () => {
   const client = new TurboSMTPClient({ consumerKey: KEY, consumerSecret: SECRET });

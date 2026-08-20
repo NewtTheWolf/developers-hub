@@ -20,3 +20,4 @@ Each ADR is a Markdown file named `NNNN-short-title.md` where `NNNN` is a zero-p
 | [0006](0006-legacy-official-sdk-consolidation.md) | Legacy Official SDK Consolidation — Deprecate `turboSMTP-{csharp,php,python}` | C# / PHP / Python | Accepted | 2026-08-11 |
 | [0007](0007-sdk-packaging-granularity.md) | SDK Packaging Granularity — One Unified Package Per Language | All SDKs | Accepted | 2026-08-14 |
 | [0008](0008-python-transport-injection-strategy.md) | Transport Injection Strategy | Python SDK | Accepted | 2026-08-14 |
+| [0009](0009-webhook-receiver-package.md) | Webhook Receiver Package — `@turbosmtp/webhook`, Mirrored Like Any Other Unit | Node SDK | Proposed | 2026-08-20 |

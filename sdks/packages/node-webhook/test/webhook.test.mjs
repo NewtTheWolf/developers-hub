@@ -279,3 +279,17 @@ test('a multi-byte subject split across chunks survives the documented receiver'
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+// The sibling package carries the same assertion. It was added there first, and this
+// package kept emitting maps that `files` does not ship — so the check belongs in both.
+test('the shipped builds carry no dangling source map references', async () => {
+  const { readFileSync } = await import('node:fs');
+
+  for (const artifact of ['../dist/cjs/index.js', '../dist/esm/index.mjs', '../dist/cjs/index.d.ts']) {
+    const text = readFileSync(new URL(artifact, import.meta.url), 'utf8');
+    assert.ok(
+      !text.includes('sourceMappingURL'),
+      `${artifact} points at a source map the tarball does not ship`,
+    );
+  }
+});

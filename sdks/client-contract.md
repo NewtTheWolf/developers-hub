@@ -236,11 +236,19 @@ Formatting rules, normative:
   backslash-escaped. Quoting is what keeps a name like `Dr. Smith` intact in `from` and `reply-to`;
   see the comma rule below for why it is not sufficient in the recipient fields.
 - A `name` free of specials is emitted unquoted.
-- A display name containing a **comma MUST be rejected** for `to`, `cc` and `bcc` with the SDK's
-  base error, naming the field. **Live-verified 2026-08-18:** the API splits those fields on commas
-  *before* parsing RFC 5322 quoted strings, so `"Doe, Jane" <a@x.com>` is torn in half and the send
-  fails with `'"Doe' 'to' email not valid`. Quoting cannot prevent this. `from` and `replyTo` are
-  **not** comma-split and MUST keep the quoted form — both were verified to accept it.
+- A **structured address** whose `name` contains a **comma MUST be rejected** for `to`, `cc` and
+  `bcc` with the SDK's base error, naming the field. **Live-verified 2026-08-18:** the API splits
+  those fields on commas *before* parsing RFC 5322 quoted strings, so `"Doe, Jane" <a@x.com>` is
+  torn in half and the send fails with `'"Doe' 'to' email not valid`. Quoting cannot prevent this.
+  `from` and `replyTo` are **not** comma-split and MUST keep the quoted form — both were verified
+  to accept it.
+- The comma rule is scoped to the `name` field, not to the serialized output. A **pre-formatted
+  string MUST NOT be comma-checked**: a comma-separated list is the wire format of these fields, so
+  rejecting one would refuse the exact string the SDK itself emits for an array of recipients, and
+  would contradict the verbatim rule above. A caller who hand-writes `'"Doe, Jane" <a@x.com>'` as a
+  string therefore receives the API's `400` rather than a local error — accepted, because the
+  alternative is either breaking comma-separated lists or parsing quoted strings the facade never
+  produced.
 - An address or display name containing **CR or LF MUST be rejected** with the SDK's base error.
   The API carries these values into MIME headers, so a line break in caller-supplied text is
   header injection; quoting does not neutralise it. This applies to `from`, `to`, `cc`, `bcc` and

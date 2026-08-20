@@ -55,22 +55,26 @@ export function joinAddresses(input: AddressInput): string {
  *
  * Live-verified: the API splits these fields on commas *before* it parses RFC 5322
  * quoted strings, so a comma inside a display name is torn apart and the send is
- * rejected with `'"Doe' 'to' email not valid`. Quoting cannot prevent it, so the
- * comma is refused here where the message can name the field and the fix.
- * `from` and `reply-to` are unaffected — neither is comma-split.
+ * rejected with `'"Doe' 'to' email not valid`. Quoting cannot prevent it, so a name
+ * the SDK would have to quote is refused here, where the message can name the field
+ * and the fix. `from` and `reply-to` are unaffected — neither is comma-split.
+ *
+ * Only the display name of an address *object* is checked. A plain string reaches
+ * the wire verbatim (§4.1), which keeps a comma-separated list working: that is the
+ * field's own wire format, and rejecting it would refuse the exact string this
+ * function returns.
  */
 export function joinRecipients(input: AddressInput, field: string): string {
   return (Array.isArray(input) ? input : [input])
     .map((address) => {
-      const formatted = formatAddress(address);
-      if (formatted.includes(',')) {
+      if (typeof address !== 'string' && address.name?.includes(',')) {
         throw new TurboSMTPError(
           `A comma in a display name cannot be sent in \`${field}\`, because TurboSMTP splits ` +
             'recipient lists on commas before parsing quoted names. Remove the comma or drop the ' +
-            `display name for this recipient: ${formatted}`,
+            `display name for this recipient: ${address.name}`,
         );
       }
-      return formatted;
+      return formatAddress(address);
     })
     .join(',');
 }

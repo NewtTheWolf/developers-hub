@@ -67,6 +67,21 @@ test('a comma in a recipient display name is rejected with an actionable message
   }
 });
 
+// The check reads the display name, not the formatted output: a bare CSV is the
+// wire format of these fields, so rejecting it would refuse the exact string the
+// SDK itself emits, and §4.1 passes a pre-formatted string through verbatim.
+test('a comma-separated recipient string is passed through, not rejected', async () => {
+  const body = await send({ ...base, from: 'a@x.com', to: 'b@y.com,c@y.com' });
+
+  assert.equal(body.to, 'b@y.com,c@y.com');
+});
+
+test('an array of plain addresses still joins to the same CSV it accepts', async () => {
+  const body = await send({ ...base, from: 'a@x.com', to: ['b@y.com', 'c@y.com'] });
+
+  assert.equal(body.to, 'b@y.com,c@y.com');
+});
+
 test('a comma in the sender display name is allowed and quoted', async () => {
   const body = await send({ ...base, from: { address: 'a@x.com', name: 'Acme, Inc.' }, to: ['b@y.com'] });
 

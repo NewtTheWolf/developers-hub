@@ -13,9 +13,13 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  ApiError,
   AuthenticationError,
   BadRequestError,
+  ForbiddenError,
   NetworkError,
+  NotFoundError,
+  RateLimitError,
   TurboSMTPClient,
   TurboSMTPError,
 } from '../dist/cjs/index.js';
@@ -248,4 +252,40 @@ test('an omitted from or to throws a typed error naming the field', async () => 
       `an omitted ${field} must throw a typed error naming it`,
     );
   }
+});
+
+// §3.3 numbers the statuses the spec documents. These four are the rest of the §3.4
+// hierarchy, and until now only the export list mentioned them: 429 and 5xx are not in
+// the spec at all and are handled defensively, so nothing else would catch a regression.
+test('the remaining §3.4 statuses map to their own error classes', async () => {
+  const cases = [
+    [403, { message: 'wrong_credentials_specified' }, ForbiddenError],
+    [404, { message: 'domain_not_found' }, NotFoundError],
+    [429, { message: 'too many requests' }, RateLimitError],
+    [503, { message: 'upstream unavailable' }, ApiError],
+  ];
+
+  for (const [status, body, Expected] of cases) {
+    const client = clientWith(makeFetch(status, body));
+
+    await assert.rejects(
+      () => client.mail.send({ from: 'a@x.com', to: ['b@y.com'], text: 'x' }),
+      (err) => {
+        assert.ok(err instanceof Expected, `${status} must be a ${Expected.name}, got ${err.name}`);
+        assert.ok(err instanceof TurboSMTPError, 'every error stays under the base class');
+        assert.equal(err.status, status);
+        return true;
+      },
+      `status ${status}`,
+    );
+  }
+});
+
+test('a 429 carrying Retry-After exposes it as retryAfter', async () => {
+  const client = clientWith(makeFetch(429, { message: 'slow down' }, { 'Retry-After': '30' }));
+
+  await assert.rejects(
+    () => client.mail.send({ from: 'a@x.com', to: ['b@y.com'], text: 'x' }),
+    (err) => err instanceof RateLimitError && err.retryAfter === 30,
+  );
 });

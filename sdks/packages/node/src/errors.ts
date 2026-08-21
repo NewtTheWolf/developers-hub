@@ -59,7 +59,13 @@ export class BadRequestError extends TurboSMTPError {
   }
 }
 
-/** 400 — input-validation subset of BadRequestError, when distinguishable. */
+/**
+ * 400 — input-validation subset of BadRequestError, when distinguishable (§3.4).
+ *
+ * Unreachable in P0 and deliberately so: `/mail/send` answers 400 with the
+ * send-specific `{ message, errors[] }` body, which §3.4 maps to `BadRequestError`.
+ * The domain 400 enums that map here arrive with the validation domain (P1).
+ */
 export class ValidationError extends BadRequestError {
   constructor(message: string, init: TurboSMTPErrorInit & { errors?: string[] } = {}) {
     super(message, init);

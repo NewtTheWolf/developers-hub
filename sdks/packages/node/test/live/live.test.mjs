@@ -151,6 +151,33 @@ suite('live smoke tests', () => {
     assertExactId(res.messageId);
   });
 
+  // The mocked suite asserts which URL the region selects; only a live run can say
+  // whether the EU host accepts the same credentials, which is what a developer
+  // switching regions actually needs to know.
+  test('the eu region reaches the eu host and accepts the same credentials', async () => {
+    let seen;
+    const spy = async (url, init) => {
+      seen = url.toString();
+      return fetch(url, init);
+    };
+    const eu = new TurboSMTPClient({
+      consumerKey: KEY,
+      consumerSecret: SECRET,
+      region: 'eu',
+      fetchApi: spy,
+    });
+
+    const res = await eu.mail.send({
+      from: FROM,
+      to: [TO],
+      subject: subject('eu region'),
+      text: 'Sent through the EU host.',
+    });
+
+    assert.match(seen, /^https:\/\/api\.eu\.turbo-smtp\.com\//, 'eu must not fall back to another host');
+    assertExactId(res.messageId);
+  });
+
   test('bad credentials produce a typed AuthenticationError', async () => {
     const bad = new TurboSMTPClient({ consumerKey: KEY, consumerSecret: 'not-the-secret' });
 

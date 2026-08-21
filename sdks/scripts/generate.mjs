@@ -9,6 +9,11 @@
  *   3. generate : openapi-generator-cli generate -c config/<lang>.yaml            (version pinned in
  *                 ../openapitools.json). Fed the 3.1 spec directly — no down-convert (see 1.3/1.4).
  *
+ * Both tools are pinned to an exact version. The bundler is not a passive step: its output
+ * is the generator's input, so a bundler minor changes the committed Layer 1 without any
+ * spec change. ADR-0004 rules 1-2 apply — never a range permitting minors, and the floor is
+ * the version actually validated.
+ *
  * Cross-platform by design: pure Node + `npx`, so it runs identically on Windows (local) and Linux
  * (CI). Requires Node 18+ and a JVM (the generator is Java; the npm wrapper downloads the jar).
  *
@@ -35,6 +40,9 @@ import { fileURLToPath } from 'node:url';
 const SDK_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = resolve(SDK_ROOT, '..');
 const BUILD_DIR = join(SDK_ROOT, 'build');
+
+/** Exact, not a range: see the pipeline note above. Verified against this repository's spec. */
+const REDOCLY = '@redocly/cli@2.47.0';
 
 const SPEC_IN = join(REPO_ROOT, 'api-reference', 'turbo-smtp.yaml');
 const BUNDLED = join(BUILD_DIR, 'turbo-smtp.bundled.yaml');
@@ -97,7 +105,7 @@ function main() {
 
   // 1. Bundle (skippable if the bundle already exists and is fresh).
   if (!args['skip-bundle']) {
-    run('bundle spec', `npx --yes @redocly/cli@latest bundle "${SPEC_IN}" -o "${BUNDLED}"`);
+    run('bundle spec', `npx --yes ${REDOCLY} bundle "${SPEC_IN}" -o "${BUNDLED}"`);
   }
 
   // 2. Filter to the domain's tag(s) and prune orphaned components.
@@ -109,7 +117,7 @@ function main() {
   );
   run(
     `filter → ${domain} [${tags.join(', ')}]`,
-    `npx --yes @redocly/cli@latest bundle "${BUNDLED}" --config "${filterCfg}" --remove-unused-components -o "${filtered}"`,
+    `npx --yes ${REDOCLY} bundle "${BUNDLED}" --config "${filterCfg}" --remove-unused-components -o "${filtered}"`,
   );
 
   // 3. Generate each language from the filtered, domain-scoped spec.

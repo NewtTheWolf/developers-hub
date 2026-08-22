@@ -1,8 +1,9 @@
 # TurboSMTP SDK — Language-Agnostic Client Contract
 
-> **Status: RATIFIED (Phase 0 gate passed — 2026-07-22).** This is the keystone contract every
-> TurboSMTP SDK must satisfy; it is now authoritative and SDK code is unblocked. Any change from here
-> is a versioned amendment (see [§8](#8-conformance--change-control)). Strategy and rationale live
+> **Status: RATIFIED (Phase 0 gate passed — 2026-07-22). Version 1.1.0.** This is the keystone
+> contract every TurboSMTP SDK must satisfy; it is now authoritative and SDK code is unblocked. Any
+> change from here is a versioned amendment ([§8.1](#81-amendment-mechanism)), logged in
+> [§9](#9-amendments). Strategy and rationale live
 > in [`plan.md`](./plan.md); the executable checklist is [`TASKS.md`](./TASKS.md). This document
 > fulfills tasks **0.2** (author the contract) and **0.3** (P0/P1 coverage & namespace names).
 
@@ -127,10 +128,11 @@ deployments need it).
 
 ### 3.3 P0 Mail conformance scenarios
 
-> **This section is a stable anchor** — `TASKS.md` 2.3 and 4.1 reference **§3.3** by number. Keep the
-> numbering and the count of eight.
+> **This section is a stable anchor** — `TASKS.md` 2.3 and 4.1 reference **§3.3** by number. Scenario
+> numbers are permanent: never renumbered, never reused, never retired. New rules append, and the
+> count is not a constraint ([§8.1](#81-amendment-mechanism)).
 
-Every SDK's Layer 3 tests must cover these **8 scenarios**. They run against the Prism mock server
+Every SDK's Layer 3 tests must cover these **11 scenarios**. They run against the Prism mock server
 (credential-free) except where a live send is noted; scenarios 1–2 also back a gated live smoke test.
 
 | # | Scenario | Asserts |
@@ -143,6 +145,9 @@ Every SDK's Layer 3 tests must cover these **8 scenarios**. They run against the
 | 6 | **EU region routing** — client with `region:"eu"` | `/mail/send` request targets `https://api.eu.turbo-smtp.com/api/v2`; a `global` client targets `https://api.turbo-smtp.com/api/v2` |
 | 7 | **Auth failure** — bad credentials → 401 | throws typed `AuthenticationError`; carries `errorCode`/`message`/`details` from the send 401 body |
 | 8 | **Validation error** — missing `from`/`to`, or `nocredit` → 400 | throws typed `BadRequestError`; exposes the `errors[]` array from the send 400 body |
+| 9 | **Reply-To precedence** — `replyTo` set alongside a `Reply-To` key in `headers`, in any casing | exactly one `reply-to` key reaches the wire and it carries the `replyTo` value; the header-supplied one does not survive beside it (§4.2) |
+| 10 | **Line-break rejection** — CR or LF in `from`, `to`, `cc`, `bcc` or `replyTo`, both as a display name and inside a pre-formatted string | throws a typed error before the request is built; nothing reaches the transport (§4.1) |
+| 11 | **Region rejection** — client constructed with an unrecognised `region` | throws a typed error at construction, distinct from scenario 6, which asserts routing for the two valid values (§3.2b, discrepancy 12) |
 
 ### 3.4 Error taxonomy
 
@@ -415,3 +420,29 @@ Spec-vs-reality gaps the facade papers over (each one drives a mapping/decision 
   the safeguard against cross-language drift.
 - **Review gate:** this document must be reviewed and approved before any Phase 1 generation or
   Phase 2 facade code begins.
+
+### 8.1 Amendment mechanism
+
+- **Version.** The banner carries a semantic version over the *facade surface*, not over the
+  document: **MAJOR** breaks a conforming SDK, **MINOR** adds a normative rule an SDK must
+  implement, **PATCH** clarifies without implementation consequence. An SDK states conformance
+  against that number — "turbosmtp-node implements contract 1.1.0" — rather than against a
+  ratification date that stops describing the file after the first amendment.
+- **Log.** Every amendment adds one row to [§9](#9-amendments): version, date, PR, sections touched,
+  scenarios added.
+- **How [§3.3](#33-p0-mail-conformance-scenarios) grows.** Scenario numbers are permanent: never
+  renumbered, never reused, never retired. A rule that sharpens a scenario already present
+  strengthens that row in place; a rule that is new *in kind* appends a new number. Holding the
+  count fixed would push new rules out of the anchor, which is the one thing the anchor exists to
+  prevent.
+- **Anchoring invariant.** Every normative MUST in [§4](#4-p0--mail-domain-full-detail) carries at
+  least one §3.3 scenario. A rule with no scenario is a rule the cross-language matrix (`TASKS.md`
+  4.1) never extracts, so it holds in the language it was written for and silently does not in the
+  other four. An amendment that adds a MUST without a scenario is incomplete.
+
+## 9. Amendments
+
+| Version | Date | PR | Sections touched | Scenarios added |
+|---|---|---|---|---|
+| 1.0.0 | 2026-07-22 | — | Ratified at the Phase 0 gate | 1–8 |
+| 1.1.0 | 2026-08-22 | [#5](https://github.com/turboSMTP/developers-hub/pull/5) | §3.2b, §3.3, §4.1, §4.2, §4.5 (new), §7 (10–13), §8.1 (new) | 9, 10, 11 |

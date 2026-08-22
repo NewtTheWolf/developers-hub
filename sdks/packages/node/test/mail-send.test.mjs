@@ -1,9 +1,10 @@
 /**
  * P0 Mail — Layer 3 conformance tests (client-contract.md §3.3).
  *
- * The eight numbered scenarios below map 1:1 to the contract's conformance
- * matrix; the numbering is stable (§3.3 mandates exactly eight). A few extra
- * tests cover cross-cutting behavior (config validation, network errors).
+ * The numbered scenarios below map 1:1 to the contract's conformance matrix; the
+ * numbering is permanent and new rules append (§8.1). Scenarios 9 and 10 are address
+ * rules and live in address.test.mjs. A few extra tests cover cross-cutting behavior
+ * (config validation, network errors).
  *
  * Run: `npm test` (builds first, then `node --test`). Imports the built facade
  * from ../dist so the tests exercise the real published entry point.
@@ -228,7 +229,8 @@ test('transport failure maps to NetworkError (status null)', async () => {
   );
 });
 
-test('an unknown region is rejected at construction', () => {
+// §3.3.11 — Region rejection (routing itself is §3.3.6) ----------------------
+test('§3.3.11 an unknown region is rejected at construction', () => {
   assert.throws(() => new TurboSMTPClient({ ...creds, region: 'EU' }), TurboSMTPError);
   assert.throws(() => new TurboSMTPClient({ ...creds, region: 'us' }), TurboSMTPError);
   assert.doesNotThrow(() => new TurboSMTPClient({ ...creds, region: 'eu' }));

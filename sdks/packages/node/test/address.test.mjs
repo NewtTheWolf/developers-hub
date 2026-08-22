@@ -1,5 +1,6 @@
 /**
- * Address formatting (client-contract.md §4.1).
+ * Address formatting (client-contract.md §4.1), plus conformance scenarios §3.3.9
+ * and §3.3.10, which are address rules rather than send-shape rules.
  *
  * Every address parameter accepts a pre-formatted string, a structured address
  * with an optional display name, or a collection of either. Assertions read the
@@ -136,7 +137,8 @@ test('replyTo accepts an address object and reaches custom_headers', async () =>
   assert.equal(body.custom_headers['reply-to'], 'Reply Desk <r@x.com>');
 });
 
-test('an explicit replyTo replaces a custom header of any casing', async () => {
+// §3.3.9 — Reply-To precedence ------------------------------------------------
+test('§3.3.9 an explicit replyTo replaces a custom header of any casing', async () => {
   const body = await send({
     ...base,
     from: 'a@x.com',
@@ -161,17 +163,30 @@ test('a custom Reply-To header survives when no replyTo is given', async () => {
   assert.equal(body.custom_headers['Reply-To'], 'kept@x.com');
 });
 
-test('a carriage return or newline in a display name is rejected', async () => {
-  await assert.rejects(
-    send({ ...base, from: { address: 'a@x.com', name: 'Jane\r\nBcc: evil@example.com' }, to: ['b@y.com'] }),
-    /line break/i,
-    'a display name must not be able to inject a header',
-  );
+// §3.3.10 — Line-break rejection ----------------------------------------------
+// Every address field routes through formatAddress, so the guard is asserted on all
+// five rather than on the one that happened to be reported.
+const FIELDS = ['from', 'to', 'cc', 'bcc', 'replyTo'];
+const valid = { from: 'a@x.com', to: ['b@y.com'] };
+
+test('§3.3.10 a line break in a display name is rejected in every address field', async () => {
+  for (const field of FIELDS) {
+    const injected = { address: 'evil@x.com', name: 'Jane\r\nBcc: evil@example.com' };
+    await assert.rejects(
+      send({ ...base, ...valid, [field]: field === 'from' || field === 'replyTo' ? injected : [injected] }),
+      /line break/i,
+      `a display name in ${field} must not be able to inject a header`,
+    );
+  }
 });
 
-test('a line break in a pre-formatted address string is rejected', async () => {
-  await assert.rejects(
-    send({ ...base, from: 'a@x.com', to: ['b@y.com\nBcc: evil@example.com'] }),
-    /line break/i,
-  );
+test('§3.3.10 a line break in a pre-formatted address string is rejected in every address field', async () => {
+  for (const field of FIELDS) {
+    const injected = 'evil@x.com\nBcc: evil@example.com';
+    await assert.rejects(
+      send({ ...base, ...valid, [field]: field === 'from' || field === 'replyTo' ? injected : [injected] }),
+      /line break/i,
+      `a pre-formatted address in ${field} must not be able to inject a header`,
+    );
+  }
 });

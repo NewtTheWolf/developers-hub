@@ -20,7 +20,7 @@ Each ADR is a Markdown file named `NNNN-short-title.md` where `NNNN` is a zero-p
 | [0006](0006-legacy-official-sdk-consolidation.md) | Legacy Official SDK Consolidation — Deprecate `turboSMTP-{csharp,php,python}` | C# / PHP / Python | Accepted | 2026-08-11 |
 | [0007](0007-sdk-packaging-granularity.md) | SDK Packaging Granularity — One Unified Package Per Language | All SDKs | Accepted | 2026-08-14 |
 | [0008](0008-python-transport-injection-strategy.md) | Transport Injection Strategy | Python SDK | Accepted | 2026-08-14 |
-| [0009](0009-webhook-receiver-package.md) | Webhook Receiver Package — `@turbosmtp/webhook`, Mirrored Like Any Other Unit | Node SDK | Proposed | 2026-08-20 |
+| [0009](0009-webhook-receiver-package.md) | Webhook Receiver Package — `@turbosmtp/webhook`, Mirrored Like Any Other Unit | All SDKs | Proposed | 2026-08-20 |
 | [0010](0010-lint-and-format-floor.md) | Lint and Format Floor — Biome, Repository-Scoped, Pinned Exactly | `sdks/` JS/TS | Proposed | 2026-08-21 |
 | [0011](0011-sdks-ci-gate.md) | CI for `sdks/` — What the Merge Gate Covers | `sdks/` | Proposed | 2026-08-21 |
 | [0012](0012-client-side-validation-boundary.md) | Client-Side Validation Boundary — Guard What the SDK Transforms | All SDKs | Proposed | 2026-08-21 |

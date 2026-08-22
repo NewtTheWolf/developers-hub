@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Proposed |
 | **Date** | 2026-08-20 |
-| **Applies to** | Node SDK; [ADR-0007](0007-sdk-packaging-granularity.md) carve-out 2; [ADR-0003](0003-sdk-repository-topology.md) mirror topology |
+| **Applies to** | All SDKs (decisions 2 and 3); Node SDK (decisions 1 and 4); [ADR-0007](0007-sdk-packaging-granularity.md) carve-out 2; [ADR-0003](0003-sdk-repository-topology.md) mirror topology |
 
 ---
 
@@ -51,6 +51,10 @@ mirror question has to be answered deliberately rather than inherited.
 ---
 
 ## Decision
+
+Decisions 1 and 4 are about the Node package in front of us. Decisions 2 and 3 are not: the first is
+mirroring policy and the second is release machinery, and both bind all five SDKs the moment a
+second language takes the carve-out.
 
 ### 1. The carve-out stands, on corrected grounds
 

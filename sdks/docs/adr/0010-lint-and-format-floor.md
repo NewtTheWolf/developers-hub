@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | Proposed |
+| **Status** | Accepted |
 | **Date** | 2026-08-21 |
 | **Applies to** | `sdks/` JavaScript and TypeScript; extends [ADR-0004](0004-build-toolchain-version-policy.md) |
 

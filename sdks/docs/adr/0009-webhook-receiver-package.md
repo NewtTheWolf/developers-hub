@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | Proposed |
+| **Status** | Accepted |
 | **Date** | 2026-08-20 |
 | **Applies to** | All SDKs (decisions 2 and 3); Node SDK (decisions 1 and 4); [ADR-0007](0007-sdk-packaging-granularity.md) carve-out 2; [ADR-0003](0003-sdk-repository-topology.md) mirror topology |
 

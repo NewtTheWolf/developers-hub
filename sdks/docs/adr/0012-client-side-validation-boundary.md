@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | Proposed |
+| **Status** | Accepted |
 | **Date** | 2026-08-21 |
 | **Applies to** | All five SDKs; `client-contract.md` §3.4 and §4.1 |
 
@@ -32,16 +32,24 @@ The rule below was proposed by @sergio-matteoda on that thread:
 > format constraints belong in the OpenAPI spec, not in facade code. Where the server's error for an
 > invalid field is unclear, the fix is the server's message."*
 
-Held against the five validations the Node package performs today, it decides two cleanly, decides
-two by its conclusion while its stated reason does not fit, and is silent on the fifth:
+Held against every caller-supplied value the Node facade dereferences or transforms today, it
+decides two cleanly, decides two by its conclusion while its stated reason does not fit, is silent
+on a fifth, and exposes a sixth that had no guard at all:
 
-| Validation | Under the rule as proposed |
+| Transformed input | Under the rule as proposed |
 |---|---|
 | `from` / `to` presence (`mail.ts`) | Fits. Both are dereferenced; the fault is the SDK's and never reaches the server |
 | `to: []` forwarded to the server's 400 | Fits. Transformed but not faulting, so the server answers |
 | Comma in a recipient display name (`address.ts`) | Conclusion fits, reason does not |
 | CR/LF in an address or display name (`address.ts`) | Conclusion fits, reason does not |
 | `region` and credentials (`client.ts`) | Not covered |
+| `headers` names and values (`mail.ts`) | Unguarded. Merged, walked and emitted as MIME header pairs, with CR/LF passing through |
+
+The last row is the reason the table is keyed by input rather than by guard. A first pass of this
+audit enumerated the guards that existed and checked each against the rule; run that way it can
+only find a guard that should not be there, never a field that should be guarded and is not. The
+review of PR #5 probed the built facade and found `headers: { 'X-Foo': 'bar\r\nBcc: evil@…' }`
+sent verbatim, name and value both, while the five address fields beside it were guarded.
 
 The comma case transforms and the fault **does** reach the server, which rejects it as
 `'"Doe' 'to' email not valid`. Clause 2's reason ("never reaches the server") therefore does not
@@ -157,8 +165,11 @@ removed later. A record carries the reasoning; `client-contract.md` §4 carries 
   accepted as preferable to enumerating boundaries in advance.
 - **Clause 4 creates an obligation the SDK program cannot discharge alone.** Filing a discrepancy is
   ours; improving the server's message is not, so some stopgaps will be long-lived.
-- **Existing facade code must be audited against clause 1 as each language lands**, not only new
-  code. Node's audit is the table above.
+- **Existing facade code must be audited as each language lands**, not only new code, and the
+  audit enumerates **every caller-supplied value the facade dereferences or transforms**, not the
+  guards that already exist. The first direction finds missing guards; the second can only find
+  surplus ones. Node's audit is the table above, and its `headers` row is the case the wrong
+  direction missed.
 - **`client-contract.md` §4.1 currently states the comma rule without citing the discrepancy that
   clause 4 now requires.** It cites discrepancy 13 in §7, so the citation exists; whether the
   wording satisfies clause 4 is a contract-amendment question rather than an ADR one.

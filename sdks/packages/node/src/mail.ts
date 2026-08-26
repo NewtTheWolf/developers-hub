@@ -13,6 +13,7 @@ import {
   formatAddress,
   joinAddresses,
   joinRecipients,
+  rejectLineBreaks,
   senderDomain,
 } from './address';
 import { TurboSMTPError, toTurboSMTPError } from './errors';
@@ -83,9 +84,17 @@ function bytesToBase64(input: Uint8Array | ArrayBuffer): string {
   return out;
 }
 
-/** Merge custom headers with an explicit `replyTo` (replyTo wins). */
+/**
+ * Merge custom headers with an explicit `replyTo` (replyTo wins). The pairs land in
+ * MIME headers verbatim, so a line break in a name or a value is header injection
+ * exactly as it is in an address (§4.1).
+ */
 function buildCustomHeaders(msg: SendMessage): { [key: string]: string } | undefined {
   const headers: { [key: string]: string } = { ...(msg.headers ?? {}) };
+  for (const [name, value] of Object.entries(headers)) {
+    rejectLineBreaks(name, 'A header name');
+    rejectLineBreaks(value, 'A header value');
+  }
   if (msg.replyTo != null) {
     // Header names are case-insensitive, so any existing spelling has to go first;
     // otherwise both survive and the message goes out with two Reply-To headers.

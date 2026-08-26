@@ -165,7 +165,8 @@ test('a custom Reply-To header survives when no replyTo is given', async () => {
 
 // §3.3.10 — Line-break rejection ----------------------------------------------
 // Every address field routes through formatAddress, so the guard is asserted on all
-// five rather than on the one that happened to be reported.
+// five rather than on the one that happened to be reported. Custom headers reach a
+// MIME header just as directly, so they are covered by the same scenario.
 const FIELDS = ['from', 'to', 'cc', 'bcc', 'replyTo'];
 const valid = { from: 'a@x.com', to: ['b@y.com'] };
 
@@ -188,5 +189,12 @@ test('§3.3.10 a line break in a pre-formatted address string is rejected in eve
       /line break/i,
       `a pre-formatted address in ${field} must not be able to inject a header`,
     );
+  }
+});
+
+test('§3.3.10 a line break in a custom header is rejected, in the name and in the value', async () => {
+  const cases = [{ 'X-Foo': 'bar\r\nBcc: evil@example.com' }, { 'X-Foo\r\nBcc: evil@example.com': 'bar' }];
+  for (const headers of cases) {
+    await assert.rejects(send({ ...base, ...valid, headers }), /line break/i);
   }
 });

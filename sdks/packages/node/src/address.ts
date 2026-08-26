@@ -19,13 +19,13 @@ export type AddressInput = Address | Address[];
 const SPECIALS = /[(),.:;<>@[\]"\\]/;
 
 /**
- * A CR or LF anywhere in an address would be carried into a MIME header by the API,
- * letting caller-supplied text inject headers of its own. Quoting does not neutralise
- * it, so it is rejected outright at this boundary.
+ * A CR or LF in an address or a custom header would be carried into a MIME header by
+ * the API, letting caller-supplied text inject headers of its own. Quoting does not
+ * neutralise it, so it is rejected outright at this boundary.
  */
-function rejectLineBreaks(value: string, field: string): string {
+export function rejectLineBreaks(value: string, what: string): string {
   if (/[\r\n]/.test(value)) {
-    throw new TurboSMTPError(`An address ${field} must not contain a line break.`);
+    throw new TurboSMTPError(`${what} must not contain a line break.`);
   }
   return value;
 }
@@ -33,13 +33,13 @@ function rejectLineBreaks(value: string, field: string): string {
 /** Format one address. A string is trusted verbatim — the caller owns its formatting. */
 export function formatAddress(address: Address): string {
   if (typeof address === 'string') {
-    return rejectLineBreaks(address, 'string');
+    return rejectLineBreaks(address, 'An address');
   }
-  rejectLineBreaks(address.address, 'address');
+  rejectLineBreaks(address.address, 'An address');
   if (!address.name) {
     return address.address;
   }
-  rejectLineBreaks(address.name, 'display name');
+  rejectLineBreaks(address.name, 'A display name');
   // An unquoted comma in a display name would split into bogus recipients downstream.
   const name = SPECIALS.test(address.name) ? `"${address.name.replace(/(["\\])/g, '\\$1')}"` : address.name;
   return `${name} <${address.address}>`;

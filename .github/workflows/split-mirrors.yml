@@ -14,7 +14,9 @@ name: Split packages to publish mirrors
 # reason this workflow exists.
 #
 # Requires a secret `MIRROR_TOKEN` — a PAT or GitHub App installation token with
-# `contents: write` on the five turbosmtp-* mirror repos.
+# `contents: write` on every turbosmtp-* mirror the `case` below resolves to
+# (six today: the five unified SDKs plus turbosmtp-node-webhook). A token scoped
+# to fewer repos passes every check here and 403s on the final push.
 
 on:
   push:
@@ -101,7 +103,10 @@ jobs:
       - name: Verify the package directory exists
         env:
           PREFIX: ${{ steps.target.outputs.prefix }}
-        run: test -d "$PREFIX"
+        run: |
+          if [ ! -d "$PREFIX" ]; then
+            echo "::error::No package directory at '$PREFIX'. A package slug must equal its directory name under sdks/packages/."; exit 1
+          fi
 
       - name: Split the package subtree
         id: split

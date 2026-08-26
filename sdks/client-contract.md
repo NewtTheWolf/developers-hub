@@ -445,7 +445,9 @@ Spec-vs-reality gaps the facade papers over (each one drives a mapping/decision 
   prevent.
 - **Anchoring invariant, in both directions.** Every normative MUST in
   [§4](#4-p0--mail-domain-full-detail) or [§3.2b](#32b-region-model) carries at least one §3.3
-  scenario, and every §3.3 scenario cites the MUST it tests. A rule with no scenario is a rule the
+  scenario, and every §3.3 scenario traces to the rule it tests: a MUST in those sections, a
+  mapping row in [§4.2](#42-mapping--mailmessage-layer-2--wire) or
+  [§4.3](#43-return-shape), or the [§3.4](#34-error-taxonomy) taxonomy. A rule with no scenario is a rule the
   cross-language matrix (`TASKS.md` 4.1) never extracts, so it holds in the language it was written
   for and silently does not in the other four. A scenario with no rule is a test of nothing the
   contract requires, which is how scenario 11 shipped with a discrepancy entry and two

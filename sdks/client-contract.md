@@ -123,6 +123,11 @@ API server. Hosts (from the spec):
 | Send — Global (default) | `https://api.turbo-smtp.com/api/v2` | `/mail/send` when `region = "global"` |
 | Send — EU | `https://api.eu.turbo-smtp.com/api/v2` | `/mail/send` when `region = "eu"` (EU data residency) |
 
+An unrecognised `region` **MUST be rejected at construction** with the SDK's base error, rather
+than left to fall through: an unset base URL resolves to the global API host, which does not serve
+`/mail/send`, so the request succeeds against the wrong server ([§7](#7-discrepancies-register)
+discrepancy 12; [§3.3](#33-p0-mail-conformance-scenarios) scenario 11).
+
 A raw `baseUrl` override escape-hatch is **out of scope** for P0 (may be revisited if self-hosted
 deployments need it).
 
@@ -146,7 +151,7 @@ Every SDK's Layer 3 tests must cover these **11 scenarios**. They run against th
 | 7 | **Auth failure** — bad credentials → 401 | throws typed `AuthenticationError`; carries `errorCode`/`message`/`details` from the send 401 body |
 | 8 | **Validation error** — missing `from`/`to`, or `nocredit` → 400 | throws typed `BadRequestError`; exposes the `errors[]` array from the send 400 body |
 | 9 | **Reply-To precedence** — `replyTo` set alongside a `Reply-To` key in `headers`, in any casing | exactly one `reply-to` key reaches the wire and it carries the `replyTo` value; the header-supplied one does not survive beside it (§4.2) |
-| 10 | **Line-break rejection** — CR or LF in `from`, `to`, `cc`, `bcc` or `replyTo`, both as a display name and inside a pre-formatted string | throws a typed error before the request is built; nothing reaches the transport (§4.1) |
+| 10 | **Line-break rejection** — CR or LF in `from`, `to`, `cc`, `bcc` or `replyTo`, both as a display name and inside a pre-formatted string, or in a `headers` name or value | throws a typed error before the request is built; nothing reaches the transport (§4.1) |
 | 11 | **Region rejection** — client constructed with an unrecognised `region` | throws a typed error at construction, distinct from scenario 6, which asserts routing for the two valid values (§3.2b, discrepancy 12) |
 
 ### 3.4 Error taxonomy
@@ -257,7 +262,10 @@ Formatting rules, normative:
 - An address or display name containing **CR or LF MUST be rejected** with the SDK's base error.
   The API carries these values into MIME headers, so a line break in caller-supplied text is
   header injection; quoting does not neutralise it. This applies to `from`, `to`, `cc`, `bcc` and
-  `replyTo`, and to pre-formatted strings as well as structured addresses.
+  `replyTo`, to pre-formatted strings as well as structured addresses, and to every `headers`
+  name and value, which the facade turns into a MIME header pair directly. The trigger is where
+  the value lands, not which parameter it arrived in
+  ([ADR-0012](docs/adr/0012-client-side-validation-boundary.md) clause 5).
 
 **Attachment** (facade): `{ content: bytes, filename: string, contentType: string, contentId?: string }`.
 The SDK base64-encodes `content` — the developer never handles base64.
@@ -435,10 +443,13 @@ Spec-vs-reality gaps the facade papers over (each one drives a mapping/decision 
   strengthens that row in place; a rule that is new *in kind* appends a new number. Holding the
   count fixed would push new rules out of the anchor, which is the one thing the anchor exists to
   prevent.
-- **Anchoring invariant.** Every normative MUST in [§4](#4-p0--mail-domain-full-detail) carries at
-  least one §3.3 scenario. A rule with no scenario is a rule the cross-language matrix (`TASKS.md`
-  4.1) never extracts, so it holds in the language it was written for and silently does not in the
-  other four. An amendment that adds a MUST without a scenario is incomplete.
+- **Anchoring invariant, in both directions.** Every normative MUST in
+  [§4](#4-p0--mail-domain-full-detail) or [§3.2b](#32b-region-model) carries at least one §3.3
+  scenario, and every §3.3 scenario cites the MUST it tests. A rule with no scenario is a rule the
+  cross-language matrix (`TASKS.md` 4.1) never extracts, so it holds in the language it was written
+  for and silently does not in the other four. A scenario with no rule is a test of nothing the
+  contract requires, which is how scenario 11 shipped with a discrepancy entry and two
+  cross-references but no MUST. An amendment that adds either without the other is incomplete.
 
 ## 9. Amendments
 

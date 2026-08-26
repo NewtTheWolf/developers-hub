@@ -154,7 +154,9 @@ one-unified-package rule for API domains is untouched.
 - **A sixth mirror must be created before the first release tag.** `turbosmtp-node-webhook` does not
   exist yet; a `node-webhook/v0.2.0` tag pushed before it does will fail in the push step.
 - **ADR-0007 now has a sentence that reads as false in isolation.** Mitigated by this record's
-  reference from the index; ADR-0007 itself stays immutable.
+  reference from the index; ADR-0007 itself stays immutable. `sdks/index.md` carried the same claim
+  in customer-facing form ("no need to install separate libraries per feature"); it is mutable, so
+  it is corrected to speak of API domains rather than features.
 - **Per-language divergence is possible.** Nothing here obliges Python, Go, PHP or C# to ship a
   receiver package. Where a language's idiom differs, this record is the precedent to argue against,
   not a mandate.

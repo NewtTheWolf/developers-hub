@@ -14,6 +14,7 @@ Official and community-maintained client libraries for the TurboSMTP API.
 | Language | Status | Install | Guide |
 |---|---|---|---|
 | Node.js / TypeScript | Built, publish pending | *not yet published* — planned as `@turbosmtp/sdk` | [nodejs.md](nodejs.md) |
+| Node.js webhook receiver | Built, publish pending | *not yet published* — planned as `@turbosmtp/webhook` | [packages/node-webhook](packages/node-webhook/README.md) |
 | Python | Planned | *not yet published* | [python.md](python.md) |
 | C# | Planned | *not yet published* — planned as `TurboSMTP` (NuGet) | [csharp.md](csharp.md) |
 | Go | Planned | *not yet published* — planned as `github.com/turbosmtp/turbosmtp-go` | [go.md](go.md) |
@@ -40,10 +41,13 @@ each replacement ships, so they remain readable until then.
 
 ## SDK Design Philosophy
 
-All official TurboSMTP SDKs expose a **unified client surface** — one package per language, with
-each feature area as a namespace (`mail`, `validation`, …). There is no need to install separate
-libraries per feature. The surface every SDK must satisfy is fixed in
-[`client-contract.md`](client-contract.md).
+All official TurboSMTP SDKs expose a **unified client surface** — one package per language for the
+API itself, with each API domain as a namespace (`mail`, `validation`, …). There is no need to
+install a separate library per API domain. Webhook receiving ships separately where a language
+warrants it ([ADR-0007](docs/adr/0007-sdk-packaging-granularity.md) carve-out 2,
+[ADR-0009](docs/adr/0009-webhook-receiver-package.md)), because the receiver runs in the process
+that accepts callbacks rather than the one that sends mail. The surface every SDK must satisfy is
+fixed in [`client-contract.md`](client-contract.md).
 
 Minimal instantiation, as shipped in the Node.js SDK:
 

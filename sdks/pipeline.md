@@ -27,7 +27,7 @@ flowchart TD
         F["LAYER 2 · facade<br/>client · mail · errors"]
         G["LAYER 3 · tests<br/>conformance + packaging"]
         H["build artifacts<br/>dist/cjs + dist/esm"]
-        T["release tag<br/>lang/vX.Y.Z"]
+        T["release tag<br/>&lt;package&gt;/vX.Y.Z"]
 
         C -->|"deploy-swagger-ui.yml"| PAGES
         C -->|"redocly bundle"| D
@@ -46,7 +46,7 @@ flowchart TD
     T -->|"split-mirrors.yml<br/>git subtree split"| M
 
     subgraph mir["read-only mirrors"]
-        M["turbosmtp-node · -python · -dotnet<br/>-go · -php<br/>tag translated to vX.Y.Z, unprefixed"]
+        M["turbosmtp-node · -python · -dotnet<br/>-go · -php · -node-webhook<br/>tag translated to vX.Y.Z, unprefixed"]
     end
 
     M --> REG2["pkg.go.dev · Packagist<br/>read the repository directly"]
@@ -54,16 +54,20 @@ flowchart TD
 
 ## What happens on a release tag
 
-Tags are `lang/vX.Y.Z` and versions are **independent per language** — no lockstep family version, so
-no language's release waits on another. The two publication routes differ because two registries
-consume a repository rather than an uploaded artifact.
+Tags are `<package>/vX.Y.Z`, where the prefix is a package slug equal to its directory under
+`sdks/packages/` (`node`, `python`, `csharp`, `go`, `php`, `node-webhook`), and versions are
+**independent per publishable unit** — no lockstep family version, so no package's release waits on
+another. The slug equals the language only for the five unified SDKs, because each is that
+language's single unit; Node has two ([ADR-0009](docs/adr/0009-webhook-receiver-package.md)). The
+two publication routes differ because two registries consume a repository rather than an uploaded
+artifact.
 
 ```mermaid
 flowchart LR
     TAG["git tag<br/>node/v1.2.0"] --> WF["split-mirrors.yml"]
     WF --> S1["verify MIRROR_TOKEN"]
     S1 --> S2["checkout at tag<br/>fetch-depth 0<br/>persist-credentials false"]
-    S2 --> S3["resolve lang → mirror"]
+    S2 --> S3["resolve package → mirror"]
     S3 --> S4["git subtree split<br/>sdks/packages/node"]
     S4 --> S5["force-push to mirror main"]
     S5 --> S6["push tag as v1.2.0<br/>UNPREFIXED"]

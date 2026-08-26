@@ -6,7 +6,7 @@ This file provides guidance to Claude Code when working in this repository.
 
 **TurboSMTP Developers Hub** — the public-facing documentation portal for the TurboSMTP API.
 
-Content is authored in Markdown and published via GitHub Pages. This is a docs-as-code repository: there is no build step required locally; CI validates and deploys automatically on push to `main`.
+Content is authored in Markdown and published via GitHub Pages. This is a docs-as-code repository: the documentation needs no local build step, and CI validates and deploys it automatically on push to `main`. The SDK packages under `sdks/` are the exception; they build, lint and test like any code (see **SDK Development**).
 
 ## Repository Structure
 
@@ -17,6 +17,8 @@ Content is authored in Markdown and published via GitHub Pages. This is a docs-a
 - **`.github/`** — GitHub Actions workflows and PR/issue templates
   - `workflows/validate-openapi.yml` — Lints OpenAPI spec on push
   - `workflows/deploy-swagger-ui.yml` — Deploys to GitHub Pages
+  - `workflows/sdks-ci.yml` — Lint, typecheck, build and test `sdks/` on pull requests and `main` (ADR-0011)
+  - `workflows/split-mirrors.yml` — On a `<package>/vX.Y.Z` tag, pushes that package's subtree to its read-only mirror (ADR-0003, ADR-0009)
 
 ## Relationship to `turbo-smtp-openapi/`
 
@@ -58,13 +60,25 @@ Tooling & generation:
   7.24.0) via the npm wrapper `@openapitools/openapi-generator-cli`. Requires a
   JVM (Java 17 verified).
 - Input is the **bundled** 3.1 spec `sdks/build/turbo-smtp.bundled.yaml`, produced
-  by `npx @redocly/cli bundle api-reference/turbo-smtp.yaml`. Fed to the generator
-  **as 3.1 — no down-convert needed** (all 5 languages handle it natively).
+  by `redocly bundle` at the exact version pinned in `sdks/scripts/generate.mjs`
+  (currently `@redocly/cli@2.47.0`). Fed to the generator **as 3.1 — no down-convert
+  needed** (all 5 languages handle it natively).
 - `sdks/build/` is git-ignored (regenerated artifacts). Never hand-edit generated
   Layer 1 code — change the spec upstream and regenerate.
 - Gotcha: the generator's default `skipFormModel=true` drops multipart upload
   request models — verify multipart when configuring the validation/suppressions/
   subaccount domains.
+
+Lint and format (ADR-0010):
+- Biome is the formatter and linter for `sdks/**`, configured in the root `biome.json`
+  and **pinned to the exact version its `$schema` names** (currently 2.5.4). Generated
+  Layer 1 and `dist/` are excluded. `sdks-ci.yml` runs `biome ci sdks` as a merge gate,
+  so run `npx --yes @biomejs/biome@2.5.4 check --write sdks` before opening a pull request
+  or it goes red on formatting.
+- Per package: `npm run typecheck`, `npm test` (builds first), and `npm run
+  typecheck:examples` in `sdks/packages/node` — the same steps CI runs.
+- Both packages declare `engines: { "node": ">=22" }`; CI tests the floor and the active
+  LTS (ADR-0011).
 
 ## Documentation Standards
 

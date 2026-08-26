@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | Proposed |
+| **Status** | Accepted |
 | **Date** | 2026-08-21 |
 | **Applies to** | `sdks/`; relates to `TASKS.md` 4.4, 4.5, 4.6 and [ADR-0004](0004-build-toolchain-version-policy.md) rule 4 |
 
@@ -19,9 +19,12 @@ spec-drift guard, **4.6** per-language publish on tag. A fourth, **4.7**, is don
 before those exist risks either duplicating them or foreclosing their shape, so the boundary between
 this workflow and those three needs stating rather than discovering later.
 
-A second question surfaced with it. Both packages declare `engines: { "node": ">=18" }` while the
-matrix runs Node 22 only, and [ADR-0004](0004-build-toolchain-version-policy.md) rule 4 requires each
-package to declare a minimum supported *consumer* toolchain version and to check against it.
+A second question surfaced with it. Both packages declared `engines: { "node": ">=18" }` while the
+matrix ran Node 22 only, and [ADR-0004](0004-build-toolchain-version-policy.md) rule 4 requires each
+package to declare a minimum supported *consumer* toolchain version and to check against it. Review
+then asked whether `>=18` was a floor worth promising at all: Node 18 reached end of life on
+2025-04-30 and Node 20 on 2026-04-30, so the declaration covered two runtimes without security
+patches.
 
 ---
 
@@ -53,22 +56,34 @@ is the correctness job. It stays separate anyway: drift is a property of the *re
 spec*, not of the change under review, so it fails pull requests that did not cause it. It belongs on
 a schedule or on spec change.
 
-### 3. The test matrix covers the declared consumer floor, not just the development version
+### 3. The test matrix covers the declared Node floor, not just the development version
 
 ADR-0004 rule 4 asks each package to declare a minimum consumer toolchain and to check against it.
-`engines: ">=18"` is a promise to consumers, and the floor is where it breaks — a global that does
-not exist yet, a syntax level the parser rejects — so testing only Node 22 verifies the version
-nobody is promised anything about.
+`engines` is a promise to consumers, and the floor is where it breaks — a global that does not
+exist yet, a syntax level the parser rejects — so testing only the development version verifies the
+version nobody is promised anything about.
 
-The matrix therefore runs the **declared floor and the current LTS**: Node 18 and Node 22. Testing
-every version in between buys little; testing the two ends is what makes `engines` a checked claim
-rather than an assertion.
+The floor is **`>=22`**, and the matrix runs the **declared floor and the active LTS**: Node 22 and
+Node 24. Testing every version in between buys little; testing the two ends is what makes `engines`
+a checked claim rather than an assertion.
 
-**The `>=18` claim is currently unverified.** It was written from the package's apparent
-requirements, not from a run, and no Node 18 was available when this record was drafted. The first
-matrix run is therefore a test of the claim itself, and the honest outcomes are two: it passes, or
-`engines` was wrong and is corrected to what actually works. Correcting it is a legitimate result,
-not a failure of this decision.
+`>=18` was the first draft, written from the package's apparent requirements rather than from a
+run, and it was raised for a reason the run could not have produced: a passing matrix on an
+end-of-life runtime would still be the wrong promise. Node 18 and 20 are both past end of life, so
+`>=18` offered support for runtimes that receive no security patches. 22 is the maintenance LTS
+line and 24 the active one; the floor follows the supported lines rather than what happens to
+execute.
+
+**Two limits of this decision, stated so the record is not read as more than it is.** First, it
+verifies the *source tree*: `npm ci`, `typecheck` and `test` inside the package directory. ADR-0004
+is explicit that this is the insufficient form of rule 4, which wants the real tarball installed into
+a scratch project outside the repository and resolved the way a consumer resolves it. That recipe
+has been run once by hand (`TASKS.md` 2.5 records the published `.d.ts` type-checking under TS 5.4
+through both the `exports` map and the `main`/`types` fallback); automating it is still owed by 4.1
+and 4.6, and this matrix is the weaker cousin that runs on every pull request meanwhile. Second, the
+consumer floor of a TypeScript package has two axes, Node *and* TypeScript, and ADR-0004's
+motivating incident was on the TypeScript one. This matrix covers the Node axis only; the declared
+TypeScript floor of 5.4 remains hand-checked.
 
 ### 4. Fork pull requests get no secrets, and that is load-bearing
 
@@ -118,7 +133,11 @@ mistaken for a verified one.
 
 - **The matrix doubles the test jobs.** Both are short; if this becomes a real cost, dropping the
   floor from pull requests and keeping it on `main` is the obvious lever.
-- **`engines: ">=18"` may not survive its first check.** Stated above as an accepted outcome.
+- **Raising the floor is a consumer-visible change, and it will happen again.** Node 22 leaves
+  maintenance on 2027-04-30; the floor moves with the supported lines, and each move is a release
+  note, not a silent edit.
+- **The TypeScript floor is declared and not gated.** Stated above; the artifact-based check that
+  would cover it is 4.1/4.6's.
 - **No coverage measurement, no mutation testing, no cross-language conformance run.** The last of
   those is 4.1, which does not exist yet; this gate will need extending when it does.
 - **Fork pull requests from first-time contributors need maintainer approval before any job runs**,

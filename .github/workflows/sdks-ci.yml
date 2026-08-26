@@ -40,9 +40,11 @@ jobs:
       # it fails on (ADR-0004 rules 1-3). Keep in step with biome.json's $schema.
       - run: npx --yes @biomejs/biome@2.5.4 ci sdks
 
-  # Both ends of what the packages promise: `engines` says >=18, so 18 is the claim
-  # under test and 22 is what development runs on. The build toolchain runs on both
-  # (typescript >=16.20, esbuild >=18), so no artifact hand-off is needed.
+  # Both ends of what the packages promise: `engines` says >=22, so 22 is the claim
+  # under test and 24 is the active LTS consumers install today. The build toolchain
+  # runs on both (typescript >=16.20, esbuild >=18), so no artifact hand-off is needed.
+  # This verifies the source tree, not the tarball; ADR-0004 rule 4's artifact-based
+  # check is still owed (ADR-0011 decision 3).
   test:
     name: Test ${{ matrix.package }} on Node ${{ matrix.node }}
     runs-on: ubuntu-latest
@@ -50,7 +52,7 @@ jobs:
       fail-fast: false
       matrix:
         package: [node, node-webhook]
-        node: [18, 22]
+        node: [22, 24]
     defaults:
       run:
         working-directory: sdks/packages/${{ matrix.package }}

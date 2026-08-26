@@ -14,7 +14,7 @@ npm install @turbosmtp/sdk
 yarn add @turbosmtp/sdk
 ```
 
-**Requirements:** Node.js 18+
+**Requirements:** Node.js 22+
 
 ---
 

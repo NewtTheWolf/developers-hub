@@ -74,6 +74,13 @@ end-of-life runtime would still be the wrong promise. Node 18 and 20 are both pa
 line and 24 the active one; the floor follows the supported lines rather than what happens to
 execute.
 
+This choice is free only because neither package has been published: `TASKS.md` 2.5 and 2.9 are
+both blocked, so no existing consumer can be excluded by raising the floor now. The same change
+after a first release is breaking and may require a major version. Each language therefore settles
+its support floor against maintained runtime lines before its first publication, while it still gets
+that choice once without a compatibility cost. Python, Go, PHP and C# apply the rule to their own
+runtime support policies rather than copying Node's number.
+
 **Two limits of this decision, stated so the record is not read as more than it is.** First, it
 verifies the *source tree*: `npm ci`, `typecheck` and `test` inside the package directory. ADR-0004
 is explicit that this is the insufficient form of rule 4, which wants the real tarball installed into
@@ -125,6 +132,8 @@ mistaken for a verified one.
 - SDK code stops merging unverified, before four more languages inherit the reference package's
   conventions.
 - `engines` becomes a checked claim rather than a declaration, satisfying ADR-0004 rule 4.
+- The support floor is settled before first publication, while changing it excludes no existing
+  consumer; the remaining languages inherit that timing rule.
 - The boundary against 4.4/4.5/4.6 is stated now, so those three can be designed without negotiating
   with an existing gate.
 - Path filters keep documentation-only changes out of the SDK jobs entirely.
@@ -133,9 +142,10 @@ mistaken for a verified one.
 
 - **The matrix doubles the test jobs.** Both are short; if this becomes a real cost, dropping the
   floor from pull requests and keeping it on `main` is the obvious lever.
-- **Raising the floor is a consumer-visible change, and it will happen again.** Node 22 leaves
-  maintenance on 2027-04-30; the floor moves with the supported lines, and each move is a release
-  note, not a silent edit.
+- **Future floor raises are consumer-visible changes.** The initial choice is free because the
+  packages are unpublished; after that, Node 22 leaves maintenance on 2027-04-30, the floor moves
+  with the supported lines, and each move is a release note and potential major release, not a
+  silent edit.
 - **The TypeScript floor is declared and not gated.** Stated above; the artifact-based check that
   would cover it is 4.1/4.6's.
 - **No coverage measurement, no mutation testing, no cross-language conformance run.** The last of

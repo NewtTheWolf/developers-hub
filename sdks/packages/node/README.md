@@ -9,7 +9,7 @@
 The official [TurboSMTP](https://serversmtp.com) SDK for **Node.js and TypeScript** — a small,
 dependency-free client for sending transactional email through the TurboSMTP API.
 
-- **Zero runtime dependencies** — uses the built-in `fetch` (Node.js 22+).
+- **Zero runtime dependencies** — uses the built-in `fetch`.
 - **Typed end to end** — first-class TypeScript types for every request and response.
 - **Idiomatic** — recipient arrays, `text`/`html` bodies, byte attachments (base64 handled for you),
   a typed error hierarchy, and a single options object for configuration.

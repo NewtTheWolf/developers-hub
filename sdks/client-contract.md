@@ -1,6 +1,6 @@
 # TurboSMTP SDK — Language-Agnostic Client Contract
 
-> **Status: RATIFIED (Phase 0 gate passed — 2026-07-22). Version 1.1.0.** This is the keystone
+> **Status: RATIFIED (Phase 0 gate passed — 2026-07-22). Version 1.1.1.** This is the keystone
 > contract every TurboSMTP SDK must satisfy; it is now authoritative and SDK code is unblocked. Any
 > change from here is a versioned amendment ([§8.1](#81-amendment-mechanism)), logged in
 > [§9](#9-amendments). Strategy and rationale live
@@ -263,9 +263,9 @@ Formatting rules, normative:
   The API carries these values into MIME headers, so a line break in caller-supplied text is
   header injection; quoting does not neutralise it. This applies to `from`, `to`, `cc`, `bcc` and
   `replyTo`, to pre-formatted strings as well as structured addresses, and to every `headers`
-  name and value, which the facade turns into a MIME header pair directly. The trigger is where
-  the value lands, not which parameter it arrived in
-  ([ADR-0012](docs/adr/0012-client-side-validation-boundary.md) clause 5).
+  name and value, which the facade turns into a MIME header pair directly. The trigger is whether
+  the SDK constructs the header pair, not merely whether caller-supplied text eventually lands in
+  one ([ADR-0012](docs/adr/0012-client-side-validation-boundary.md) clause 5).
 
 **Attachment** (facade): `{ content: bytes, filename: string, contentType: string, contentId?: string }`.
 The SDK base64-encodes `content` — the developer never handles base64.
@@ -434,7 +434,7 @@ Spec-vs-reality gaps the facade papers over (each one drives a mapping/decision 
 - **Version.** The banner carries a semantic version over the *facade surface*, not over the
   document: **MAJOR** breaks a conforming SDK, **MINOR** adds a normative rule an SDK must
   implement, **PATCH** clarifies without implementation consequence. An SDK states conformance
-  against that number — "turbosmtp-node implements contract 1.1.0" — rather than against a
+  against that number — "turbosmtp-node implements contract 1.1.1" — rather than against a
   ratification date that stops describing the file after the first amendment.
 - **Log.** Every amendment adds one row to [§9](#9-amendments): version, date, PR, sections touched,
   scenarios added.
@@ -459,3 +459,4 @@ Spec-vs-reality gaps the facade papers over (each one drives a mapping/decision 
 |---|---|---|---|---|
 | 1.0.0 | 2026-07-22 | — | Ratified at the Phase 0 gate | 1–8 |
 | 1.1.0 | 2026-08-22 | [#5](https://github.com/turboSMTP/developers-hub/pull/5) | §3.2b, §3.3, §4.1, §4.2, §4.5 (new), §7 (10–13), §8.1 (new) | 9, 10, 11 |
+| 1.1.1 | 2026-08-30 | [#5](https://github.com/turboSMTP/developers-hub/pull/5) | §4.1 header-construction trigger clarified | — |

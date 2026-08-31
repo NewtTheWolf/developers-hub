@@ -29,7 +29,7 @@ Each example maps to a conformance scenario in
 
 ## Prerequisites
 
-- Node.js `>= 18`.
+- Node.js `>= 22`.
 - Your TurboSMTP **Consumer Key** and **Consumer Secret**.
 - A `from` address on a domain **authorized for your account** (otherwise the API
   returns `400`).

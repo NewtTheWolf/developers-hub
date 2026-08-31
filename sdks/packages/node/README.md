@@ -36,7 +36,7 @@ dependency-free client for sending transactional email through the TurboSMTP API
 
 ## Requirements
 
-- **Node.js `>= 18`** — the SDK uses the global `fetch`, `Response`, and `Uint8Array`, so no polyfill
+- **Node.js `>= 22`** — the SDK uses the global `fetch`, `Response`, and `Uint8Array`, so no polyfill
   or HTTP dependency is needed.
 - Works with both **TypeScript** and plain **JavaScript** (CommonJS or ESM consumers).
 

@@ -73,10 +73,13 @@ across several requests during a burst.
 ### `parseWebhookEvents(body): TurboSMTPEvent[]`
 
 Accepts the request body as a raw JSON string, an already-parsed object, or an array of objects,
-and always returns an array.
+and always returns an array. Prefer the raw JSON body so the parser can preserve a 64-bit `mid`
+before JavaScript rounds it. An already-parsed object remains supported when `mid` is a string or
+a safe integer.
 
 Throws a `SyntaxError` if a string body is not valid JSON, and an `Error` if an event is not an
-object or is missing `mid`, `email`, `status` or a timestamp.
+object, is missing `mid`, `email`, `status` or a timestamp, or carries an unsafe numeric `mid` whose
+original value can no longer be recovered.
 
 ### `verifyBasicAuth(authorizationHeader, secret): boolean`
 
@@ -111,8 +114,10 @@ Live payloads differ from the published documentation in ways that break naive p
 - The timestamp key is **`Timestamp`**, capitalised. A lowercase `timestamp` is accepted as a
   fallback.
 - `mid` is a **64-bit snowflake**. `JSON.parse` silently rounds it above 2^53, so a long integer
-  literal is quoted before the body is parsed. The scan is string-aware: a digit run inside a
-  subject or a URL is left exactly as it arrived.
+  literal is quoted before the raw body is parsed. The scan is string-aware: a digit run inside a
+  subject or a URL is left exactly as it arrived. If middleware has already parsed and rounded a
+  numeric `mid`, the parser rejects it rather than returning a corrupted identifier; retain the raw
+  body or configure the upstream parser to preserve `mid` as a string.
 - Bursts arrive **chunked** across multiple requests.
 
 ## Related

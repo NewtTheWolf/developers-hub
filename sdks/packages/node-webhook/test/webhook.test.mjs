@@ -73,8 +73,17 @@ test('a 64-bit mid survives a string body that JSON.parse would round', () => {
   assert.equal(parsed.mid, '9007199254740993', 'plain JSON.parse would yield ...992');
 });
 
-test('a small numeric mid is unaffected by the precision guard', () => {
-  const [parsed] = parseWebhookEvents('{"mid":42,"email":"b@y.com","status":"OPENED","Timestamp":1}');
+test('an unsafe numeric mid from a parsed object is rejected instead of returned rounded', () => {
+  const parsedBody = JSON.parse(
+    '{"mid":9007199254740993,"email":"b@y.com","status":"DELIVERED","Timestamp":1755500000}',
+  );
+
+  assert.equal(parsedBody.mid, 9007199254740992, 'JSON.parse demonstrates that the original value is lost');
+  assert.throws(() => parseWebhookEvents(parsedBody), /unsafe numeric mid/);
+});
+
+test('a safe numeric mid from a parsed object is converted to a string', () => {
+  const [parsed] = parseWebhookEvents({ ...event, mid: 42 });
 
   assert.equal(parsed.mid, '42');
 });
@@ -213,12 +222,11 @@ test('a long fractional part is not quoted', () => {
   assert.equal(parsed.mid, '1');
 });
 
-test('an exponent literal is not quoted', () => {
-  const [parsed] = parseWebhookEvents(
-    '{"mid":1234567890123456e2,"email":"b@y.com","status":"OK","Timestamp":1}',
+test('an unsafe exponent-form mid is not quoted and is rejected after parsing', () => {
+  assert.throws(
+    () => parseWebhookEvents('{"mid":1234567890123456e2,"email":"b@y.com","status":"OK","Timestamp":1}'),
+    /unsafe numeric mid/,
   );
-
-  assert.equal(parsed.mid, String(1234567890123456e2));
 });
 
 test('a negative long integer stays a number', () => {

@@ -40,9 +40,12 @@ export interface TurboSMTPEvent {
  *
  * Accepts a parsed object, an array of objects, or a raw JSON string. TurboSMTP
  * sends one flat event object per request and chunks bursts across requests.
+ * A parsed object whose numeric `mid` is outside JavaScript's safe integer range
+ * is rejected because its original 64-bit value can no longer be recovered.
  *
  * @throws {SyntaxError} if a string body is not valid JSON.
- * @throws {Error} if an event is not an object or is missing a required field.
+ * @throws {Error} if an event is not an object, is missing a required field, or
+ * carries an unsafe numeric `mid`.
  */
 export function parseWebhookEvents(body: unknown): TurboSMTPEvent[] {
   const parsed = typeof body === 'string' ? parseBody(body) : body;
@@ -159,6 +162,12 @@ function parseEvent(event: unknown): TurboSMTPEvent {
 
   if (mid == null || email == null || status == null || rawTimestamp == null) {
     throw new Error('TurboSMTP webhook event is missing required fields (mid, email, status, timestamp).');
+  }
+
+  if (typeof mid === 'number' && !Number.isSafeInteger(mid)) {
+    throw new Error(
+      'TurboSMTP webhook event has an unsafe numeric mid. Pass the raw JSON body or preserve mid as a string.',
+    );
   }
 
   const seconds = Number(rawTimestamp);

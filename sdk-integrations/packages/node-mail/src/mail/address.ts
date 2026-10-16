@@ -50,29 +50,36 @@ export function joinAddresses(input: AddressInput): string {
   return (Array.isArray(input) ? input : [input]).map(formatAddress).join(',');
 }
 
-/**
- * Join a recipient list (`to`, `cc`, `bcc`).
- *
- * Live-verified: the API splits these fields on commas *before* it parses RFC 5322
- * quoted strings, so a comma inside a display name is torn apart and the send is
- * rejected with `'"Doe' 'to' email not valid`. Quoting cannot prevent it, so a name
- * the SDK would have to quote is refused here, where the message can name the field
- * and the fix. `from` and `reply-to` are unaffected — neither is comma-split.
- *
- * Only the display name of an address *object* is checked. A plain string reaches
- * the wire verbatim, which keeps a comma-separated list working: that is the
- * field's own wire format, and rejecting it would refuse the exact string this
- * function returns.
- */
-export function joinRecipients(input: AddressInput, field: string): string {
+/** RFC 2047 encoded words avoid the API's premature comma-splitting of recipients. */
+function encodeDisplayName(name: string): string {
+  const encoder = new TextEncoder();
+  const chunks: string[] = [];
+  let chunk = '';
+  let byteLength = 0;
+  for (const character of name) {
+    const size = encoder.encode(character).length;
+    // 45 bytes encode to 60 characters, leaving room for the wrapper within 75.
+    // Split between code points so every encoded word is valid UTF-8 on its own.
+    if (byteLength + size > 45) {
+      chunks.push(chunk);
+      chunk = '';
+      byteLength = 0;
+    }
+    chunk += character;
+    byteLength += size;
+  }
+  if (chunk) chunks.push(chunk);
+  return chunks.map((part) => `=?UTF-8?B?${btoa(String.fromCharCode(...encoder.encode(part)))}?=`).join(' ');
+}
+
+/** Join recipients, encoding structured comma names; pre-formatted strings stay verbatim. */
+export function joinRecipients(input: AddressInput): string {
   return (Array.isArray(input) ? input : [input])
     .map((address) => {
       if (typeof address !== 'string' && address.name?.includes(',')) {
-        throw new TurboSMTPError(
-          `A comma in a display name cannot be sent in \`${field}\`, because TurboSMTP splits ` +
-            'recipient lists on commas before parsing quoted names. Remove the comma or drop the ' +
-            `display name for this recipient: ${address.name}`,
-        );
+        const name = rejectLineBreaks(address.name, 'A display name');
+        const email = rejectLineBreaks(address.address, 'An address');
+        return `${encodeDisplayName(name)} <${email}>`;
       }
       return formatAddress(address);
     })

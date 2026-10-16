@@ -160,7 +160,8 @@ const euClient = new TurboSMTPClient({
 
 ### Addresses
 
-Every address field takes a plain string, an `{ address, name }` object, or an array of either:
+`from` takes one address: a plain string or an `{ address, name }` object.
+`to`, `cc`, and `bcc` each accept one address or an array mixing strings and objects:
 
 ```typescript
 await client.mail.send({
@@ -171,9 +172,12 @@ await client.mail.send({
 });
 ```
 
-A plain string is sent exactly as you wrote it, so `'Acme <billing@yourdomain.com>'` works too. A
-display name is quoted for you when it needs to be — the `Doe, Jane` above would otherwise split
-into two bogus recipients at the comma.
+A plain string is sent exactly as you wrote it, so `'Acme <billing@yourdomain.com>'` works too.
+Structured display names are quoted when needed. For `to`, `cc`, and `bcc`, names containing a comma
+are MIME-encoded instead: the API splits recipient strings on commas before parsing quoted names.
+The recipient still sees `Doe, Jane`, including the comma. Unicode names and long names are supported.
+Use the object form for comma-containing names; a hand-written `'"Doe, Jane" <user@example.com>'`
+string is passed through unchanged and the API rejects it.
 
 ### HTML body
 
@@ -188,7 +192,12 @@ await client.mail.send({
 
 ### Multiple recipients and Reply-To
 
-`to`, `cc`, and `bcc` are always arrays — the SDK joins them for the wire.
+`to`, `cc`, and `bcc` accept a single address or an array. The SDK joins arrays into the strings the
+API expects; do not send JSON arrays when calling the HTTP API directly.
+
+Use one address for `replyTo`, as a string or an `{ address, name }` object. The SDK still accepts
+lists, but the API keeps only the first address in the delivered Reply-To header. Multiple Reply-To
+addresses are not currently supported end to end.
 
 ```typescript
 await client.mail.send({
@@ -280,6 +289,9 @@ Every failure throws a subclass of `TurboSMTPError`. Catch the base class to han
 specific subclass to branch on the failure kind. Each error carries `status` (the HTTP status, or
 `null` for transport failures), `message`, and `raw` (the parsed response body when available).
 
+`BadRequestError.errors` is a flat list of strings, including when the API nests validation errors
+inside arrays. Non-string entries remain available in `raw`, which preserves the original response.
+
 > **Errors are package-scoped.** If you also install `@turbosmtp/sdk`, its `TurboSMTPError` is a
 > different class from this one — an `instanceof` check against one will not match the other. Catch
 > each package's errors using that package's own import.
@@ -355,8 +367,9 @@ recipients, attachments, EU-region routing, and error handling. See
 ## Next steps
 
 - **Developer Hub & guides:** <https://serversmtp.com/email-sdks-for-developers>
-- **Transactional email guide** — deliverability, headers, and webhooks.
-- **API reference** — the full TurboSMTP API surface.
+- **[Transactional email guide](https://github.com/turboSMTP/developers-hub/blob/main/api-integrations/docs/transactional.md)**: send parameters, attachments, and custom headers.
+- **[Webhook guide](https://github.com/turboSMTP/developers-hub/blob/main/api-integrations/docs/webhooks.md)**: configuration and delivery-event payloads.
+- **[API reference](https://turbosmtp.github.io/turbosmtp-swagger-ui/)**: the full TurboSMTP API surface.
 
 ## License
 

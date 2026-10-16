@@ -12,8 +12,8 @@
  *
  * They exist to catch what the mocked suite structurally cannot: whether the API
  * *accepts* what the facade serializes. That is not hypothetical — the recipient
- * comma rule was written only after a live run rejected an RFC-correct
- * quoted display name.
+ * comma workaround was written after live runs rejected an RFC-correct quoted
+ * display name but accepted MIME-encoded display names.
  */
 
 import assert from 'node:assert/strict';
@@ -22,12 +22,7 @@ import { beforeEach, describe, test } from 'node:test';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 const require = createRequire(import.meta.url);
-const {
-  TurboSMTPClient,
-  AuthenticationError,
-  BadRequestError,
-  TurboSMTPError,
-} = require('../../dist/cjs/index.js');
+const { TurboSMTPClient, AuthenticationError, BadRequestError } = require('../../dist/cjs/index.js');
 
 const KEY = process.env.TURBOSMTP_CONSUMER_KEY;
 const SECRET = process.env.TURBOSMTP_CONSUMER_SECRET;
@@ -194,15 +189,15 @@ suite('live smoke tests', () => {
     );
   });
 
-  test('a comma in a recipient display name fails before any request is made', async () => {
-    await assert.rejects(
-      client.mail.send({
-        from: FROM,
-        to: [{ address: TO, name: 'Doe, Jane' }],
-        subject: subject('comma'),
-        text: 'x',
-      }),
-      (err) => err instanceof TurboSMTPError && err.status === null,
-    );
+  test('comma display names in to, cc and bcc are accepted through MIME encoding', async () => {
+    const res = await client.mail.send({
+      from: FROM,
+      to: [{ address: TO, name: 'Doe, Jane' }],
+      cc: { address: TO, name: 'Müller, Jäne 👋' },
+      bcc: { address: TO, name: 'Team, Delivery' },
+      subject: subject('comma'),
+      text: 'Comma display names are preserved through MIME encoding.',
+    });
+    assertExactId(res.messageId);
   });
 });

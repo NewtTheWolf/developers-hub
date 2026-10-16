@@ -210,6 +210,23 @@ test('a 400 throws BadRequestError exposing the errors[] array', async () => {
 });
 
 // --- Extra coverage (not numbered scenarios) --------------------------------
+test('nested API validation errors become string messages while raw preserves the response', async () => {
+  const bodies = [
+    { message: 'error', errors: [[`'"Doe' 'to' email not valid`]] },
+    { message: 'error', errors: ['from required', [['nocredit']], null, 7, { field: 'to' }] },
+  ];
+  const expected = [[`'"Doe' 'to' email not valid`], ['from required', 'nocredit']];
+  for (const [i, raw] of bodies.entries()) {
+    const client = clientWith(makeFetch(400, raw));
+    await assert.rejects(client.mail.send({ from: 'a@x.com', to: 'b@y.com', text: 'x' }), (err) => {
+      assert.ok(err instanceof BadRequestError);
+      assert.deepEqual(err.errors, expected[i]);
+      assert.deepEqual(err.raw, raw);
+      return true;
+    });
+  }
+});
+
 test('constructor rejects missing credentials with TurboSMTPError', () => {
   assert.throws(() => new TurboSMTPClient({ consumerKey: 'ck' }), TurboSMTPError);
   assert.throws(() => new TurboSMTPClient({ consumerSecret: 'cs' }), TurboSMTPError);

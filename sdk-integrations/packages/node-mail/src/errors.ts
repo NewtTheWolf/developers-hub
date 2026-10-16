@@ -172,7 +172,10 @@ export async function toTurboSMTPError(err: unknown): Promise<TurboSMTPError> {
       case 400:
         return new BadRequestError(message, {
           ...base,
-          errors: isRecord(raw) && Array.isArray(raw.errors) ? (raw.errors as string[]) : undefined,
+          errors:
+            isRecord(raw) && Array.isArray(raw.errors)
+              ? raw.errors.flat(Infinity).filter((value): value is string => typeof value === 'string')
+              : undefined,
         });
       case 403:
         return new ForbiddenError(message, base);

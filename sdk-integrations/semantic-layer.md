@@ -221,32 +221,33 @@ Formatting rules, normative:
 
 - A pre-formatted string is passed to the wire **verbatim**. The caller owns its formatting.
 - A structured address without a `name` serializes to the bare address.
-- A structured address whose `name` contains an RFC 5322 §3.2.3 **special**
+- Except for recipient comma names below, a structured address whose `name` contains an RFC 5322 §3.2.3 **special**
   (`( ) , . : ; < > @ [ ] " \`) MUST be emitted as a **quoted string**, with embedded `"` and `\`
   backslash-escaped. Quoting is what keeps a name like `Dr. Smith` intact in `from` and `reply-to`;
   see the comma rule below for why it is not sufficient in the recipient fields.
 - A `name` free of specials is emitted unquoted.
-- A **structured address** whose `name` contains a **comma MUST be rejected** for `to`, `cc` and
-  `bcc` with the SDK's base error, naming the field. **Live-verified 2026-08-18:** the API splits
-  those fields on commas *before* parsing RFC 5322 quoted strings, so `"Doe, Jane" <a@x.com>` is
-  torn in half and the send fails with `'"Doe' 'to' email not valid`. Quoting cannot prevent this.
-  `from` and `replyTo` are **not** comma-split and MUST keep the quoted form — both were verified
-  to accept it. This guard is a **stopgap**; discrepancy 13 records the condition under which it is
-  removed.
-- The comma rule is scoped to the `name` field, not to the serialized output. A **pre-formatted
-  string MUST NOT be comma-checked**: a comma-separated list is the wire format of these fields, so
-  rejecting one would refuse the exact string the SDK itself emits for an array of recipients, and
-  would contradict the verbatim rule above. A caller who hand-writes `'"Doe, Jane" <a@x.com>'` as a
-  string therefore receives the API's `400` rather than a local error — accepted, because the
-  alternative is either breaking comma-separated lists or parsing quoted strings the facade never
-  produced.
+- A **structured address** whose `name` contains a **comma MUST use RFC 2047 UTF-8 encoded words**
+  for the display name in `to`, `cc` and `bcc`. Each encoded word MUST be at most 75 characters,
+  contain complete UTF-8 characters, and decode to its original part of the name. Adjacent encoded
+  words are separated by a space. **Live-verified 2026-10-16:** quoted names still fail because the
+  API splits recipients on commas before parsing them; encoded names are accepted and retain their
+  decoded display names in delivered mail, including Unicode names on the Global and EU hosts.
+  `from` and `replyTo` are not comma-split and MUST keep the quoted form.
+- Encoding applies only to structured `name` values. **Pre-formatted strings MUST remain verbatim**,
+  including comma-separated recipient lists. A caller who hand-writes `'"Doe, Jane" <a@x.com>'`
+  therefore receives the API's `400`; use a structured address to let the SDK encode the name.
 - An address or display name containing **CR or LF MUST be rejected** with the SDK's base error.
   The API carries these values into MIME headers, so a line break in caller-supplied text is
   header injection; quoting does not neutralise it. This applies to `from`, `to`, `cc`, `bcc` and
   `replyTo`, to pre-formatted strings as well as structured addresses, and to every `headers`
   name and value, which the facade turns into a MIME header pair directly. The trigger is whether
   the SDK constructs the header pair, not merely whether caller-supplied text eventually lands in
-  one.
+  one. Validate these values **before encoding** a display name, so encoding cannot hide an injection.
+
+**Reply-To limitation (live-verified 2026-10-16):** the facade accepts an `AddressInput`, but the API
+retains only the first Reply-To address in delivered mail. Both address orders were tested. Use a
+single address; accepting a list at the SDK boundary does not imply end-to-end support for multiple
+Reply-To addresses. The existing input type is retained for compatibility.
 
 **Attachment** (facade): `{ content: bytes, filename: string, contentType: string, contentId?: string }`.
 The SDK base64-encodes `content` — the developer never handles base64.
@@ -291,6 +292,8 @@ SendResult { messageId: string }
 `/mail/send` uses two send-specific shapes, mapped per the [Error taxonomy](#error-taxonomy):
 
 - **400** `SendBadRequestResponseBody` `{ message, errors[] }` → `BadRequestError` (exposes `errors[]`).
+  The facade MUST flatten nested error arrays into a string list, keeping strings in order and
+  excluding non-string entries. The original parsed response remains unchanged in `raw`.
   Real messages include invalid/missing sender or recipients, `Invalid Mime`, and `nocredit`.
 - **401** `SendUnauthorizedResponseBody` `{ errorCode, message, details }` → `AuthenticationError`
   (preserves `errorCode`/`details`).
@@ -328,12 +331,12 @@ this document's concern.
 |---|---|---|
 | 1 | **Minimal send** — `from`, `to`, `subject`, `text` | 200; returns `messageId` (non-empty string); body maps to `MailMessage` with `content` set |
 | 2 | **HTML send** — `from`, `to`, `subject`, `html` | 200; `html` maps to `html_content`; `content` omitted |
-| 3 | **Multi-recipient arrays** — `to`/`cc`/`bcc` as arrays of ≥2, mixing plain and structured addresses | serialized request has comma-joined CSV strings for `to`/`cc`/`bcc`; a display name containing specials is quoted and its `"`/`\` escaped |
+| 3 | **Multi-recipient arrays**: `to`/`cc`/`bcc` as arrays of ≥2, mixing plain and structured addresses | serialized request has comma-joined CSV strings; structured comma names use RFC 2047 UTF-8 encoded words of at most 75 characters that preserve the name and do not split a UTF-8 character; other specials are quoted and escaped; pre-formatted strings stay verbatim |
 | 4 | **Reply-To mapping** — `replyTo` set | serialized `custom_headers["reply-to"]` equals the value; no top-level `replyTo` reaches the wire |
 | 5 | **Byte attachment** — one attachment with raw bytes, `filename`, `contentType`, plus one inline attachment with `contentId` referenced from HTML | `content` is base64 of the bytes, `name`=filename, `type`=contentType, and `content_id` stays bare; every exact HTML `cid:<id>` reference is rewritten to `cid:<id>@<sender-domain>` without matching the id as a prefix of a longer one; rewriting is suppressed when the id already contains `@`, there is no HTML body, or the sender has no parseable domain |
 | 6 | **EU region routing** — client with `region:"eu"` | `/mail/send` request targets `https://api.eu.turbo-smtp.com/api/v2`; a `global` client targets `https://api.turbo-smtp.com/api/v2` |
 | 7 | **Auth failure** — bad credentials → 401 | throws typed `AuthenticationError`; carries `errorCode`/`message`/`details` from the send 401 body |
-| 8 | **Validation error** — missing `from`/`to`, or `nocredit` → 400 | throws typed `BadRequestError`; exposes the `errors[]` array from the send 400 body |
+| 8 | **Validation error**: missing `from`/`to`, or `nocredit` → 400 | throws typed `BadRequestError`; flattens nested `errors[]` arrays to strings in order, excludes non-string entries, and retains the original parsed response in `raw` |
 | 9 | **Reply-To precedence** — `replyTo` set alongside a `Reply-To` key in `headers`, in any casing | exactly one `reply-to` key reaches the wire and it carries the `replyTo` value; the header-supplied one does not survive beside it |
 | 10 | **Line-break rejection** — CR or LF in `from`, `to`, `cc`, `bcc` or `replyTo`, both as a display name and inside a pre-formatted string, or in a `headers` name or value | throws a typed error before the request is built; nothing reaches the transport |
 | 11 | **Region rejection** — client constructed with an unrecognised `region` | throws a typed error at construction, distinct from scenario 6, which asserts routing for the two valid values |
@@ -362,6 +365,8 @@ the table states its removal condition.
 | 8 | Pagination has **no total/cursor** | Iterator infers end-of-data from `count` vs `limit` |
 | 9 | **No unified error envelope** (≥3 shapes) | Normalized typed hierarchy |
 | 10 | Inline parts are keyed by **`<content_id@sender-domain>`**, while `content_id` is sent bare — undocumented, so a natural `cid:<id>` reference silently degrades to a plain attachment | Facade qualifies `cid:` references in the HTML body with the sender domain |
-| 11 | A display name is not a modeled field; the whole address is one string, so an unquoted comma in a name splits recipients | Facade accepts structured addresses and quotes names containing RFC 5322 specials; CR/LF is rejected outright as header injection |
+| 11 | A display name is not a modeled field; the whole address is one string, so an unquoted comma in a name splits recipients | Facade accepts structured addresses, quotes specials and MIME-encodes recipient comma names; CR/LF is rejected before formatting or encoding |
 | 12 | `region` selects the send host, but an unrecognised value leaves the base URL unset and the generated core silently falls back to `pro.api.serversmtp.com`, which does not serve `/mail/send` | Facade validates `region` in the constructor, so an untyped caller fails loudly rather than sending to the wrong host |
-| 13 | `to`/`cc`/`bcc` are split on commas **before** RFC 5322 quoted strings are parsed, so a quoted display name containing a comma is torn apart and rejected — while `from` and `reply-to`, which are not split, accept it | **Stopgap** — the recipient-join guard rejects a comma in a recipient display name with a field-named error; `from` and `replyTo` keep the quoted form. **Remove when** the API parses quoted strings before splitting recipient lists on commas |
+| 13 | `to`/`cc`/`bcc` are split on commas **before** RFC 5322 quoted strings are parsed, so quoted comma names fail while `from` and `reply-to` accept them | Structured recipient names use RFC 2047 UTF-8 encoding, verified through delivery. This replaces the previous local rejection. `from` and `replyTo` keep the quoted form; pre-formatted strings remain caller-owned |
+| 14 | The API retains only the first Reply-To address, even when the SDK serializes multiple addresses | Document the backend limitation and recommend one address; retain the existing SDK input type |
+| 15 | Send validation errors can contain nested arrays despite the declared string array | Flatten string messages for `BadRequestError.errors`; preserve the complete parsed response in `raw` |

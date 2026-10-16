@@ -45,7 +45,7 @@ export interface SendMessage {
   text?: string;
   /** HTML body. */
   html?: string;
-  /** First-class Reply-To; injected as the `reply-to` custom header. */
+  /** Reply-To header. Supply one address: the API retains only the first in a list. */
   replyTo?: AddressInput;
   /** Additional custom headers. An explicit `replyTo` wins over a `reply-to` key here. */
   headers?: Record<string, string>;
@@ -158,9 +158,9 @@ function required<T>(value: T | null | undefined, field: string): T {
 export function toMailMessage(msg: SendMessage): MailMessage {
   return {
     from: formatAddress(required(msg.from, 'from')),
-    to: joinRecipients(required(msg.to, 'to'), 'to'),
-    cc: msg.cc == null ? undefined : joinRecipients(msg.cc, 'cc'),
-    bcc: msg.bcc == null ? undefined : joinRecipients(msg.bcc, 'bcc'),
+    to: joinRecipients(required(msg.to, 'to')),
+    cc: msg.cc == null ? undefined : joinRecipients(msg.cc),
+    bcc: msg.bcc == null ? undefined : joinRecipients(msg.bcc),
     subject: msg.subject,
     content: msg.text,
     htmlContent: toHtmlContent(msg),

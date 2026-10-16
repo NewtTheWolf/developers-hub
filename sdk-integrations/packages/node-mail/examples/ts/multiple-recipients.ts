@@ -1,7 +1,7 @@
 /**
  * Multiple recipients + Reply-To.
  *
- * `to`, `cc`, and `bcc` are always arrays; the SDK joins them for the wire.
+ * `to`, `cc`, and `bcc` accept a single address or an array; the SDK joins arrays for the wire.
  * `replyTo` is first-class and is sent as a custom `reply-to` header.
  *
  * In your own project: import { TurboSMTPClient } from '@turbosmtp/mail';

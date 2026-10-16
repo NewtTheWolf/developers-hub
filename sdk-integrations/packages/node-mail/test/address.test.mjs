@@ -2,8 +2,8 @@
  * Address formatting, plus the Reply-To precedence and line-break rejection
  * conformance scenarios, which are address rules rather than send-shape rules.
  *
- * Every address parameter accepts a pre-formatted string, a structured address
- * with an optional display name, or a collection of either. Assertions read the
+ * Recipients accept a pre-formatted string, a structured address with an optional
+ * display name, or a collection of either. Assertions read the
  * serialized request body, so they pin the wire form rather than the facade's
  * internals.
  */
@@ -50,27 +50,55 @@ test('a display name containing specials is quoted', async () => {
   assert.equal(body.to, '"Dr. Smith" <b@y.com>');
 });
 
-// Live-verified: the API splits to/cc/bcc on commas before it parses quoted strings,
-// so a comma in a recipient display name is rejected with a 400 no matter how it is
-// quoted. Failing locally with a usable message beats a remote "'\"Doe' not valid".
-test('a comma in a recipient display name is rejected with an actionable message', async () => {
+test('comma display names are MIME-encoded across recipient fields without changing the name', async () => {
   for (const field of ['to', 'cc', 'bcc']) {
-    await assert.rejects(
-      send({
-        ...base,
-        from: 'a@x.com',
-        to: ['b@y.com'],
-        [field]: [{ address: 'c@y.com', name: 'Doe, Jane' }],
-      }),
-      (err) => err.message.includes(field) && /comma/i.test(err.message),
-      `${field} must reject a comma in a display name`,
-    );
+    const body = await send({
+      ...base,
+      from: 'a@x.com',
+      to: ['b@y.com'],
+      [field]: [{ address: 'c@y.com', name: 'Doe, Jane' }, 'b@y.com'],
+    });
+    assert.equal(body[field], '=?UTF-8?B?RG9lLCBKYW5l?= <c@y.com>,b@y.com');
   }
 });
 
-// The check reads the display name, not the formatted output: a bare CSV is the
-// wire format of these fields, so rejecting it would refuse the exact string the
-// SDK itself emits, and a pre-formatted string passes through verbatim.
+test('encoded display names respect MIME word limits without splitting Unicode characters', async () => {
+  const names = ['Müller, Jäne 👋', `Müller, ${'Jäne 👋 '.repeat(20)}`, `${'A'.repeat(44)},🙂`];
+  for (const name of names) {
+    const body = await send({ ...base, from: 'a@x.com', to: { address: 'b@y.com', name } });
+    const words = body.to.slice(0, -' <b@y.com>'.length).split(' ');
+    const decoded = words.map((word) => {
+      assert.match(word, /^=\?UTF-8\?B\?[A-Za-z0-9+/]+=*\?=$/);
+      assert.ok(word.length <= 75, 'RFC 2047 limits each encoded word to 75 characters');
+      return new TextDecoder('utf-8', { fatal: true }).decode(Buffer.from(word.slice(10, -2), 'base64'));
+    });
+    assert.equal(decoded.join(''), name);
+    assert.ok(!body.to.includes(','), 'the wire display name must not introduce recipient separators');
+  }
+});
+
+test('line breaks are rejected before encoding a comma display name or its address', async () => {
+  for (const field of ['to', 'cc', 'bcc']) {
+    for (const address of [
+      { address: 'c@y.com', name: 'Doe, Jane\r\nBcc: evil@example.com' },
+      { address: 'c@y.com\nBcc: evil@example.com', name: 'Doe, Jane' },
+    ]) {
+      const fetchApi = makeFetch(200, { message: 'OK', mid: 1 });
+      await assert.rejects(
+        new TurboSMTPClient({ ...creds, fetchApi }).mail.send({
+          ...base,
+          from: 'a@x.com',
+          to: 'b@y.com',
+          [field]: address,
+        }),
+        /line break/i,
+      );
+      assert.equal(fetchApi.calls.length, 0);
+    }
+  }
+});
+
+// Pre-formatted strings remain caller-owned, including CSV recipient lists.
 test('a comma-separated recipient string is passed through, not rejected', async () => {
   const body = await send({ ...base, from: 'a@x.com', to: 'b@y.com,c@y.com' });
 
@@ -110,6 +138,18 @@ test('a single address needs no array', async () => {
   const body = await send({ ...base, from: 'a@x.com', to: 'b@y.com' });
 
   assert.equal(body.to, 'b@y.com');
+});
+
+test('to, cc and bcc accept a single string or address object without an array', async () => {
+  for (const field of ['to', 'cc', 'bcc']) {
+    for (const [input, expected] of [
+      ['c@y.com', 'c@y.com'],
+      [{ address: 'c@y.com', name: 'Recipient' }, 'Recipient <c@y.com>'],
+    ]) {
+      const body = await send({ ...base, from: 'a@x.com', to: 'b@y.com', [field]: input });
+      assert.equal(body[field], expected);
+    }
+  }
 });
 
 test('mixed strings and objects join as CSV across to, cc and bcc', async () => {

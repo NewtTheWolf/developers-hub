@@ -209,7 +209,6 @@ test('a 400 throws BadRequestError exposing the errors[] array', async () => {
   );
 });
 
-// --- Extra coverage (not numbered scenarios) --------------------------------
 test('nested API validation errors become string messages while raw preserves the response', async () => {
   const bodies = [
     { message: 'error', errors: [[`'"Doe' 'to' email not valid`]] },
@@ -227,6 +226,7 @@ test('nested API validation errors become string messages while raw preserves th
   }
 });
 
+// --- Extra coverage (not numbered scenarios) --------------------------------
 test('constructor rejects missing credentials with TurboSMTPError', () => {
   assert.throws(() => new TurboSMTPClient({ consumerKey: 'ck' }), TurboSMTPError);
   assert.throws(() => new TurboSMTPClient({ consumerSecret: 'cs' }), TurboSMTPError);
